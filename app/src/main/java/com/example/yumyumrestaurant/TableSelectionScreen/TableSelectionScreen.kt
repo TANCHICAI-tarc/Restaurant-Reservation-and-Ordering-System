@@ -1,4 +1,4 @@
-package com.example.yumyumrestaurant
+package com.example.yumyumrestaurant.TableSelectionScreen
 
 import android.graphics.Paint
 import android.graphics.Typeface
@@ -25,15 +25,15 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.yumyumrestaurant.data.FloorItem
-import com.example.yumyumrestaurant.data.TableStatus
-import com.example.yumyumrestaurant.data.ZoneType
+import com.example.yumyumrestaurant.data.TableData.FloorItem
+import com.example.yumyumrestaurant.data.TableData.TableStatus
+import com.example.yumyumrestaurant.data.TableData.ZoneType
 import kotlinx.coroutines.launch
 import kotlin.math.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RestaurantLayout() {
+fun TableSelectionScreen() {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
 
@@ -202,8 +202,7 @@ fun RestaurantLayout() {
                                     textSize = 20f // Adjust text size to fit inside the circle
                                     color = android.graphics.Color.BLACK
                                     textAlign = Paint.Align.CENTER
-                                    typeface =
-                                        Typeface.DEFAULT_BOLD // Bold makes it easier to read
+                                    typeface = Typeface.DEFAULT_BOLD
                                 }
 
                                 // Calculate vertical centering for the text
@@ -344,11 +343,11 @@ fun remarkMessage(
             )
 
             // Draw the fixed label text (T0)
-            val paint = android.graphics.Paint().apply {
+            val paint = Paint().apply {
                 textSize = 20f
                 color = android.graphics.Color.BLACK
-                textAlign = android.graphics.Paint.Align.CENTER
-                typeface = android.graphics.Typeface.DEFAULT_BOLD
+                textAlign = Paint.Align.CENTER
+                typeface = Typeface.DEFAULT_BOLD
             }
             val textOffset = (paint.descent() + paint.ascent()) / 2
 

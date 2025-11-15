@@ -1,4 +1,4 @@
-package com.example.yumyumrestaurant.data
+package com.example.yumyumrestaurant.data.TableData
 
 import androidx.compose.ui.graphics.Color
 

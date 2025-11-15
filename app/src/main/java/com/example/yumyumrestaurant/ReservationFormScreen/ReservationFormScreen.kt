@@ -1,6 +1,6 @@
 package com.example.yumyumrestaurant.data
 
-// Jetpack Compose UI
+
 import android.app.TimePickerDialog
 import android.os.Build
 import androidx.annotation.RequiresApi
@@ -13,41 +13,37 @@ import androidx.compose.ui.unit.dp
 
 import android.app.DatePickerDialog
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.dimensionResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Remove
-//import androidx.compose.material.icons.filled.Remove
-// Date and Time
+import com.example.yumyumrestaurant.ReservationFormScreen.ReservationFormScreenViewModel
+import com.example.yumyumrestaurant.data.ReservationData.ReservationData
+import com.example.yumyumrestaurant.data.TableData.ZoneType
+
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import androidx.lifecycle.viewmodel.compose.viewModel
 
-// Optional: Dialogs (custom or third-party)
-import androidx.compose.ui.window.Dialog
-import com.example.yumyumrestaurant.data.ZoneType
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Locale
 
-data class ReservationData(
-    val date: LocalDate,
-    val time: LocalTime,
-    val guests: Int
-)
 @RequiresApi(Build.VERSION_CODES.O)
+@Composable
+fun ReservationFormScreen( viewModel: ReservationFormScreenViewModel = viewModel() ) {
+    ReservationFormScreenBody(viewModel)
+
+}
+
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ReservationScreen(
-    onReserve: (ReservationData) -> Unit = {}
-) {
+fun ReservationFormScreenBody( viewModel: ReservationFormScreenViewModel) {
     val context = LocalContext.current
+    val uiState by viewModel.uiState.collectAsState()
+
 
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
     var selectedTime by remember { mutableStateOf(LocalTime.of(11, 0)) }
@@ -205,7 +201,7 @@ fun ReservationScreen(
 
         Button(
             onClick = {
-                onReserve(ReservationData(selectedDate, selectedTime, guestCount))
+//                onReserve(ReservationData(selectedDate, selectedTime, guestCount))
             },
             modifier = Modifier.fillMaxWidth()
         ) {

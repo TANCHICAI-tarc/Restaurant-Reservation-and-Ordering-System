@@ -1,17 +1,31 @@
 package com.example.yumyumrestaurant.ReservationFormScreen;
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.example.yumyumrestaurant.data.TableData.ZoneType
 import java.time.LocalDate
 import java.time.LocalTime
 import java.util.Calendar
 
-class ReservationFormScreenUiState (
+data class ReservationFormScreenUiState (
 
-    val selectedDate: LocalDate = LocalDate.now(),
-    val selectedTime: LocalTime = LocalTime.of(11, 0),
-    val guestCount: Int = 2,
-    val showDatePicker: Boolean = false,
-    val showTimePicker: Boolean = false
+    var selectedDate: LocalDate = LocalDate.now(),
+    var selectedStartTime: String = "",
+    var selectedEndTime: String = "",
+    var guestCount: Int = 2,
+    var showDatePicker: Boolean = false,
+    var showStartTimePicker: Boolean = false,
+    var showEndTimePicker: Boolean = false,
+    var zoneExpanded:Boolean=false,
+    val selectedZone: String = ZoneType.INDOOR.name,
+    val specialRequests: String = "",
+    val startTimeError: String = "",
+    val endTimeError: String = "",
 
+    val isFormValid: Boolean = true,
+    val shouldNavigateToNextStep: Boolean = false
     )
 
 

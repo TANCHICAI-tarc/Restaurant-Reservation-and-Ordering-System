@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 import android.app.DatePickerDialog
+import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -20,6 +21,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.ui.tooling.preview.Preview
 import com.example.yumyumrestaurant.ReservationFormScreen.ReservationFormScreenViewModel
 import com.example.yumyumrestaurant.data.ReservationData.ReservationData
 import com.example.yumyumrestaurant.data.TableData.ZoneType
@@ -28,28 +30,38 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.flow.collectLatest
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun ReservationFormScreen( viewModel: ReservationFormScreenViewModel = viewModel() ) {
-    ReservationFormScreenBody(viewModel)
+fun ReservationFormScreen( onNextScreen: () -> Unit,viewModel: ReservationFormScreenViewModel = viewModel() ) {
+    val uiState by viewModel.uiState.collectAsState()
+    LaunchedEffect(uiState.shouldNavigateToNextStep) {
+        if (uiState.shouldNavigateToNextStep) {
+            // 2. Trigger Navigation
+            onNextScreen()
+
+            viewModel.resetNavigationFlag()
+        }
+    }
+
+
+    ReservationFormScreenBody(viewModel, onNextScreen)
 
 }
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ReservationFormScreenBody( viewModel: ReservationFormScreenViewModel) {
+fun ReservationFormScreenBody( viewModel: ReservationFormScreenViewModel,onNextScreen: () -> Unit) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
 
-
-    var selectedDate by remember { mutableStateOf(LocalDate.now()) }
-    var selectedTime by remember { mutableStateOf(LocalTime.of(11, 0)) }
-    var guestCount by remember { mutableStateOf(2) }
-    var showDatePicker by remember { mutableStateOf(false) }
-    var showTimePicker by remember { mutableStateOf(false) }
+    var specialRequests by remember { mutableStateOf("") }
 
     Column(modifier = Modifier.padding(16.dp)) {
         Text("Reserve a Table", style = MaterialTheme.typography.headlineSmall)
@@ -73,11 +85,11 @@ fun ReservationFormScreenBody( viewModel: ReservationFormScreenViewModel) {
         }
         // Date Field
         OutlinedTextField(
-            value = selectedDate.format(DateTimeFormatter.ofPattern("EEE, MMM d")),
+            value = uiState.selectedDate.format(DateTimeFormatter.ofPattern("EEE, MMM d")),
             onValueChange = {},
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { showDatePicker = true },
+                .clickable { viewModel.setShowDatePicker(true)  },
             enabled = false,
             placeholder = { Text("Select Date") }
         )
@@ -88,7 +100,7 @@ fun ReservationFormScreenBody( viewModel: ReservationFormScreenViewModel) {
         Row {
 
             Text(
-                text = "Time"+":",
+                text = "Start Time"+":",
                 fontSize = 16.sp
             )
 
@@ -102,21 +114,22 @@ fun ReservationFormScreenBody( viewModel: ReservationFormScreenViewModel) {
 
         // Time Field
         OutlinedTextField(
-            value = selectedTime.format(DateTimeFormatter.ofPattern("hh:mm a")),
+            value = uiState.selectedStartTime.format(DateTimeFormatter.ofPattern("hh:mm a")),
             onValueChange = {},
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { showTimePicker = true },
+                .clickable { viewModel.setShowStartTimePicker(true) },
             enabled = false,
-            placeholder = { Text("Select Time") }
+            placeholder = { Text("Select Start Time") }
         )
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
+
 
         Row {
 
             Text(
-                text = "Time"+":",
+                text = "End Time"+":",
                 fontSize = 16.sp
             )
 
@@ -128,25 +141,51 @@ fun ReservationFormScreenBody( viewModel: ReservationFormScreenViewModel) {
 
         }
 
-        val zones = listOf("All") + ZoneType.entries.map { it.name }
-        var expanded by remember { mutableStateOf(false) }
-        var selectedZone by remember { mutableStateOf("") }
+        // Time Field
+        OutlinedTextField(
+            value = uiState.selectedEndTime.format(DateTimeFormatter.ofPattern("hh:mm a")),
+            onValueChange = {},
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { viewModel.setShowEndTimePicker(true) },
+            enabled = false,
+            placeholder = { Text("Select End Time") }
+        )
+
+        Spacer(Modifier.height(16.dp))
+
+        Row {
+
+            Text(
+                text = "Seating Area"+":",
+                fontSize = 16.sp
+            )
+
+            Text(
+                text = " *",
+                color = Color.Red,
+                fontSize = 16.sp
+            )
+
+        }
+
+        val zones = ZoneType.entries.map { it.name }
 
 
 
 
 
         ExposedDropdownMenuBox(
-            expanded = expanded,
-            onExpandedChange = { expanded = !expanded }
+            expanded = uiState.zoneExpanded,
+            onExpandedChange = { viewModel.setZoneExpanded(!uiState.zoneExpanded)  }
         ) {
             OutlinedTextField(
-                value = selectedZone,
+                value = uiState.selectedZone,
                 onValueChange = {},
                 readOnly = true,
-                label = { "Text(stringResource(R.string.select_found_location))" },
+                label = { "Text(Select Zone) " },
                 trailingIcon = {
-                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = uiState.zoneExpanded)
                 },
                 modifier = Modifier
                     .menuAnchor()
@@ -154,16 +193,15 @@ fun ReservationFormScreenBody( viewModel: ReservationFormScreenViewModel) {
             )
 
             ExposedDropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false }
+                expanded = uiState.zoneExpanded,
+                onDismissRequest = { viewModel.setZoneExpanded(false) }
             ) {
-                zones.forEach {
+                zones.forEach { zone->
                     DropdownMenuItem(
-                        text = { it },
+                        text = { Text(zone)},
                         onClick = {
-//                            selectedZone = context.getString(locationResId)
-                            expanded = false
-//                            onLocationSelected(selectedLocation)
+                            viewModel.setSelectedZone(zone)
+                            viewModel.setZoneExpanded(false)
                         }
                     )
                 }
@@ -177,20 +215,20 @@ fun ReservationFormScreenBody( viewModel: ReservationFormScreenViewModel) {
 
         // Guest Count
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Guests: $guestCount", modifier = Modifier.weight(1f))
+            Text("Guests: ${uiState.guestCount}", modifier = Modifier.weight(1f))
 
-            IconButton(onClick = { if (guestCount > 1) guestCount-- }) {
+            IconButton(onClick = { viewModel.decrementGuestCount() }) {
                 Icon(Icons.Default.Remove, contentDescription = "Decrease")
             }
 
             Text(
-                text = guestCount.toString(),
+                text = uiState.guestCount.toString(),
                 fontSize = 20.sp,
                 modifier = Modifier.width(40.dp),
                 textAlign = TextAlign.Center
             )
 
-            IconButton(onClick = { if (guestCount < 10) guestCount++ }) {
+            IconButton(onClick = { viewModel.incrementGuestCount() }) {
                 Icon(Icons.Default.Add, contentDescription = "Increase")
             }
         }
@@ -198,10 +236,27 @@ fun ReservationFormScreenBody( viewModel: ReservationFormScreenViewModel) {
 
 
         Spacer(Modifier.height(24.dp))
+        Text("Special Requests:(Optional)", style = MaterialTheme.typography.titleMedium)
+
+        OutlinedTextField(
+            value = uiState.specialRequests,
+            onValueChange = { viewModel.setSpecialRequests(it) },
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = { Text("Example: Need a high chair.") },
+            label = { Text("Special Request") },
+            singleLine = false,
+            maxLines = 5,
+            )
+
+        Spacer(Modifier.height(24.dp))
+
 
         Button(
             onClick = {
-//                onReserve(ReservationData(selectedDate, selectedTime, guestCount))
+                viewModel.onReserveClicked()
+
+                onNextScreen()
+
             },
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -210,30 +265,76 @@ fun ReservationFormScreenBody( viewModel: ReservationFormScreenViewModel) {
     }
 
     // Android Date Picker
-    if (showDatePicker) {
+    if (uiState.showDatePicker) {
         DatePickerDialog(
             context,
             { _, year, month, dayOfMonth ->
-                selectedDate = LocalDate.of(year, month + 1, dayOfMonth)
-                showDatePicker = false
+                uiState.selectedDate = LocalDate.of(year, month + 1, dayOfMonth)
+                viewModel.setShowDatePicker(false)
             },
-            selectedDate.year,
-            selectedDate.monthValue - 1,
-            selectedDate.dayOfMonth
+            uiState.selectedDate.year,
+            uiState.selectedDate.monthValue - 1,
+            uiState.selectedDate.dayOfMonth
         ).show()
     }
 
     // Android Time Picker
-    if (showTimePicker) {
+    if (uiState.showStartTimePicker) {
+
+
+        val calendar = Calendar.getInstance()
+        val hour = calendar.get(Calendar.HOUR_OF_DAY)
+        val minute = calendar.get(Calendar.MINUTE)
+
         TimePickerDialog(
             context,
-            { _, hour, minute ->
-                selectedTime = LocalTime.of(hour, minute)
-                showTimePicker = false
+            { _, selectedHour, selectedMinute ->
+                val calendar = Calendar.getInstance().apply {
+                    set(Calendar.HOUR_OF_DAY, selectedHour)
+                    set(Calendar.MINUTE, selectedMinute)
+                }
+                val time = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(calendar.time)
+
+                viewModel.setSelectedStartTime(time)
+
+                viewModel.setShowStartTimePicker(false)
             },
-            selectedTime.hour,
-            selectedTime.minute,
+            hour,
+            minute,
             false
         ).show()
+
     }
+
+    if (uiState.showEndTimePicker) {
+
+
+        val calendar = Calendar.getInstance()
+        val hour = calendar.get(Calendar.HOUR_OF_DAY)
+        val minute = calendar.get(Calendar.MINUTE)
+
+        TimePickerDialog(
+            context,
+            { _, selectedHour, selectedMinute ->
+                val calendar = Calendar.getInstance().apply {
+                    set(Calendar.HOUR_OF_DAY, selectedHour)
+                    set(Calendar.MINUTE, selectedMinute)
+                }
+                val time = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(calendar.time)
+
+                viewModel.setSelectedEndTime(time)
+
+                viewModel.setShowEndTimePicker(false)
+            },
+            hour,
+            minute,
+            false
+        ).show()
+
+    }
+
+
 }
+
+
+

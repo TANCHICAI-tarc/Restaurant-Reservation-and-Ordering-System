@@ -46,50 +46,50 @@ fun TableSelectionScreen() {
     // --- 1. DATA ---
     val floorItems = remember {
         mutableStateListOf<FloorItem>(
-//            FloorItem.Table("t1", "T1", ZoneType.INDOOR,0.1f, 0.1f, 30f, 6),
-//            FloorItem.Table("t2", "T2", ZoneType.INDOOR,0.3f, 0.1f, 30f, 4),
-//            FloorItem.Table("t3", "T3", ZoneType.INDOOR,0.1f, 0.25f, 30f, 4),
-//            FloorItem.Table("t4", "T4", ZoneType.INDOOR,0.3f, 0.25f, 30f, 4),
-//            FloorItem.Table("t5", "T5", ZoneType.INDOOR,0.1f, 0.5f, 25f, 2),
-//            FloorItem.Table("t6", "T6", ZoneType.INDOOR,0.3f, 0.5f, 25f, 2),
-//            FloorItem.Table("t7", "T7", ZoneType.INDOOR,0.1f, 0.6f, 25f, 2),
-//            FloorItem.Table("t8", "T8", ZoneType.INDOOR,0.3f, 0.6f, 25f, 2),
-//            FloorItem.Table("t9", "T9", ZoneType.INDOOR,0.1f, 0.7f, 25f, 2),
-//            FloorItem.Table("t10", "T10", ZoneType.INDOOR,0.3f, 0.7f, 25f, 2),
-//            FloorItem.Table("t11", "T11", ZoneType.INDOOR,0.1f, 0.85f, 25f, 6),
-//            FloorItem.Table("t12", "T12", ZoneType.INDOOR,0.3f, 0.85f, 25f, 3),
-//            FloorItem.Table("t13", "T13", ZoneType.INDOOR,0.5f, 0.85f, 25f, 3),
-//            FloorItem.Table("t14", "T14", ZoneType.INDOOR,0.65f, 0.2f, 25f, 6),
+            FloorItem.Table("t1", "T1", ZoneType.INDOOR,0.1f, 0.1f, 30f, 6),
+            FloorItem.Table("t2", "T2", ZoneType.INDOOR,0.3f, 0.1f, 30f, 4),
+            FloorItem.Table("t3", "T3", ZoneType.INDOOR,0.1f, 0.25f, 30f, 4),
+            FloorItem.Table("t4", "T4", ZoneType.INDOOR,0.3f, 0.25f, 30f, 4),
+            FloorItem.Table("t5", "T5", ZoneType.INDOOR,0.1f, 0.5f, 25f, 2),
+            FloorItem.Table("t6", "T6", ZoneType.INDOOR,0.3f, 0.5f, 25f, 2),
+            FloorItem.Table("t7", "T7", ZoneType.INDOOR,0.1f, 0.6f, 25f, 2),
+            FloorItem.Table("t8", "T8", ZoneType.INDOOR,0.3f, 0.6f, 25f, 2),
+            FloorItem.Table("t9", "T9", ZoneType.INDOOR,0.1f, 0.7f, 25f, 2),
+            FloorItem.Table("t10", "T10", ZoneType.INDOOR,0.3f, 0.7f, 25f, 2),
+            FloorItem.Table("t11", "T11", ZoneType.INDOOR,0.1f, 0.85f, 25f, 6),
+            FloorItem.Table("t12", "T12", ZoneType.INDOOR,0.3f, 0.85f, 25f, 3),
+            FloorItem.Table("t13", "T13", ZoneType.INDOOR,0.5f, 0.85f, 25f, 3),
+            FloorItem.Table("t14", "T14", ZoneType.INDOOR,0.65f, 0.2f, 25f, 6),
 
-//            FloorItem.Region("Serving", ZoneType.INDOOR, x = 0.45f, y = 0.3f, ZoneType.INDOOR, width = 0.15f, height = 0.4f, color = Color.LightGray),
-//            FloorItem.Region("Kitchen", ZoneType.INDOOR, x = 0.65f, y = 0.3f, ZoneType.INDOOR, width = 0.3f, height = 0.5f, color = Color.DarkGray),
-//            FloorItem.Region("Cooler", ZoneType.INDOOR, x = 0.85f, y = 0.05f, ZoneType.INDOOR, width = 0.1f, height = 0.15f, color = Color.Cyan),
-//
-//
-//            FloorItem.Region("Door", ZoneType.INDOOR, x = 0.01f, y = 0.35f, ZoneType.INDOOR, width = 0.1f, height = 0.1f, color = Color(0xFF795548)),
-//
-//
-//            FloorItem.Region("Toilet Male", ZoneType.INDOOR, x = 0.65f, y = 0.85f, ZoneType.INDOOR, width = 0.3f, height = 0.05f, color = Color(0xFF03A9F4)),
-//            FloorItem.Region("Toilet Female", ZoneType.INDOOR, x = 0.65f, y = 0.91f, ZoneType.INDOOR, width = 0.3f, height = 0.05f, color = Color(0xFFE91E63)),
-//            FloorItem.Region("Window", ZoneType.INDOOR, x = 0.5f, y = 0.02f, ZoneType.INDOOR, width = 0.2f, height = 0.05f, color = Color(0xFFB3E5FC)),
-//            FloorItem.Region("Window", ZoneType.INDOOR, x = 0.15f, y = 0.95f, width = 0.2f, height = 0.05f, color = Color(0xFFB3E5FC))
+            FloorItem.Region("Serving", ZoneType.INDOOR, x = 0.45f, y = 0.3f,  width = 0.15f, height = 0.4f, color = Color.LightGray),
+            FloorItem.Region("Kitchen", ZoneType.INDOOR, x = 0.65f, y = 0.3f, width = 0.3f, height = 0.5f, color = Color.DarkGray),
+            FloorItem.Region("Cooler", ZoneType.INDOOR, x = 0.85f, y = 0.05f, width = 0.1f, height = 0.15f, color = Color.Cyan),
 
-            FloorItem.Table("t15", "T15", ZoneType.OUTDOOR, 0.6f, 0.1f, 30f, 2),
-            FloorItem.Table("t16", "T16", ZoneType.OUTDOOR, 0.75f, 0.1f, 30f, 2),
-            FloorItem.Table("t17", "T17", ZoneType.OUTDOOR, 0.6f, 0.25f, 30f, 4),
-            FloorItem.Table("t18", "T18", ZoneType.OUTDOOR, 0.75f, 0.25f, 30f, 4),
-            FloorItem.Table("t19", "T19", ZoneType.OUTDOOR, 0.6f, 0.4f, 30f, 6),
-            FloorItem.Table("t20", "T20", ZoneType.OUTDOOR, 0.75f, 0.4f, 30f, 6),
-            FloorItem.Table("t21", "T21", ZoneType.OUTDOOR, 0.6f, 0.6f, 25f, 2),
-            FloorItem.Table("t22", "T22", ZoneType.OUTDOOR, 0.75f, 0.6f, 25f, 2),
-            FloorItem.Table("t23", "T23", ZoneType.OUTDOOR, 0.6f, 0.75f, 25f, 4),
-            FloorItem.Table("t24", "T24", ZoneType.OUTDOOR, 0.75f, 0.75f, 25f, 4),
-            FloorItem.Table("t25", "T25", ZoneType.OUTDOOR, 0.6f, 0.9f, 25f, 6),
-            FloorItem.Table("t26", "T26", ZoneType.OUTDOOR, 0.75f, 0.9f, 25f, 6),
 
-            FloorItem.Region("Fountain",ZoneType.OUTDOOR,0.01f, 0.05f, 0.4f, 0.2f, color = Color(0xFF64B5F6)),
+            FloorItem.Region("Door", ZoneType.INDOOR, x = 0.01f, y = 0.35f, width = 0.1f, height = 0.1f, color = Color(0xFF795548)),
 
-            FloorItem.Region("Door", ZoneType.OUTDOOR, x = 0.01f, y = 0.35f, width = 0.1f, height = 0.1f, color = Color(0xFF795548)),
+
+            FloorItem.Region("Toilet Male", ZoneType.INDOOR, x = 0.65f, y = 0.85f, width = 0.3f, height = 0.05f, color = Color(0xFF03A9F4)),
+            FloorItem.Region("Toilet Female", ZoneType.INDOOR, x = 0.65f, y = 0.91f, width = 0.3f, height = 0.05f, color = Color(0xFFE91E63)),
+            FloorItem.Region("Window", ZoneType.INDOOR, x = 0.5f, y = 0.02f, width = 0.2f, height = 0.05f, color = Color(0xFFB3E5FC)),
+            FloorItem.Region("Window", ZoneType.INDOOR, x = 0.15f, y = 0.95f, width = 0.2f, height = 0.05f, color = Color(0xFFB3E5FC))
+
+//            FloorItem.Table("t15", "T15", ZoneType.OUTDOOR, 0.6f, 0.1f, 30f, 2),
+//            FloorItem.Table("t16", "T16", ZoneType.OUTDOOR, 0.75f, 0.1f, 30f, 2),
+//            FloorItem.Table("t17", "T17", ZoneType.OUTDOOR, 0.6f, 0.25f, 30f, 4),
+//            FloorItem.Table("t18", "T18", ZoneType.OUTDOOR, 0.75f, 0.25f, 30f, 4),
+//            FloorItem.Table("t19", "T19", ZoneType.OUTDOOR, 0.6f, 0.4f, 30f, 6),
+//            FloorItem.Table("t20", "T20", ZoneType.OUTDOOR, 0.75f, 0.4f, 30f, 6),
+//            FloorItem.Table("t21", "T21", ZoneType.OUTDOOR, 0.6f, 0.6f, 25f, 2),
+//            FloorItem.Table("t22", "T22", ZoneType.OUTDOOR, 0.75f, 0.6f, 25f, 2),
+//            FloorItem.Table("t23", "T23", ZoneType.OUTDOOR, 0.6f, 0.75f, 25f, 4),
+//            FloorItem.Table("t24", "T24", ZoneType.OUTDOOR, 0.75f, 0.75f, 25f, 4),
+//            FloorItem.Table("t25", "T25", ZoneType.OUTDOOR, 0.6f, 0.9f, 25f, 6),
+//            FloorItem.Table("t26", "T26", ZoneType.OUTDOOR, 0.75f, 0.9f, 25f, 6),
+//
+//            FloorItem.Region("Fountain",ZoneType.OUTDOOR,0.01f, 0.05f, 0.4f, 0.2f, color = Color(0xFF64B5F6)),
+//
+//            FloorItem.Region("Door", ZoneType.OUTDOOR, x = 0.01f, y = 0.35f, width = 0.1f, height = 0.1f, color = Color(0xFF795548)),
 
         )
     }
@@ -170,9 +170,7 @@ fun TableSelectionScreen() {
                             scaleY = scale,
                             translationX = offset.x,
                             translationY = offset.y,
-                            // !!! CRITICAL FIX !!!
-                            // By default, graphicsLayer zooms from the Center.
-                            // We must force it to zoom from (0,0) to match our math above.
+
                             transformOrigin = TransformOrigin(0f, 0f)
                         )
                 ) {

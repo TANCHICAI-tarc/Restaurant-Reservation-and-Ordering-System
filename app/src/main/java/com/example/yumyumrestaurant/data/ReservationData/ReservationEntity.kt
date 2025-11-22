@@ -5,6 +5,10 @@ import java.time.LocalTime
 
 data class ReservationData(
     val date: LocalDate,
-    val time: LocalTime,
-    val guests: Int
+    val startTime: String,
+    val endTime: String,
+    val guestCount: Int,
+    val zone:String,
+    val specialRequests:String
+
 )

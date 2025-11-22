@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">YumYum Restaurant</string>
+    <string name="title_reservation_form">Reservation Form</string>
+    <string name="title_select_table_zone">Select Table</string>
+    <string name="title_reservation_confirmation">Confirm Details</string>
+    <string name="title_reservation_success">Reservation Confirmed</string>
 </resources>

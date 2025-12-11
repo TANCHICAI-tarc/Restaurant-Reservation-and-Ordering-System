@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "227118936686",
+    "project_id": "yumyumrestaurant-5424a",
+    "storage_bucket": "yumyumrestaurant-5424a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:227118936686:android:b39fab98cfcd12aa97ac7f",
+        "android_client_info": {
+          "package_name": "com.example.yumyumrestaurant"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBqgw7tOfG4m93t15HpRC1FnBcg3O21Z1Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

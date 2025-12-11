@@ -1,13 +1,28 @@
 package com.example.yumyumrestaurant.TableSelectionScreen
 
+import android.app.Application
 import android.graphics.Paint
 import android.graphics.Typeface
+import android.os.Build
+import androidx.annotation.RequiresApi
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculateCentroid
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
+import androidx.compose.foundation.gestures.forEachGesture
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,327 +35,537 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.input.pointer.PointerEvent
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.yumyumrestaurant.data.TableData.FloorItem
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.yumyumrestaurant.Reservation.ReservationUiState
+import com.example.yumyumrestaurant.Reservation.ReservationViewModel
+import com.example.yumyumrestaurant.Reservation.ReservationViewModelFactory
+import com.example.yumyumrestaurant.ReservationTable.ReservationTableViewModel
+import com.example.yumyumrestaurant.ReservationTable.ReservationTableViewModelFactory
+import com.example.yumyumrestaurant.data.TableData.TableEntity
 import com.example.yumyumrestaurant.data.TableData.TableStatus
-import com.example.yumyumrestaurant.data.TableData.ZoneType
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlin.math.*
 
-@OptIn(ExperimentalMaterial3Api::class)
+
+
+
+
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun TableSelectionScreen() {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val scope = rememberCoroutineScope()
-
-    var selectedTable by remember { mutableStateOf<FloorItem.Table?>(null) }
-
-    // Zoom/Pan State
-    var scale by remember { mutableStateOf(1f) }
-    var offset by remember { mutableStateOf(Offset.Zero) }
-
-    // --- 1. DATA ---
-    val floorItems = remember {
-        mutableStateListOf<FloorItem>(
-            FloorItem.Table("t1", "T1", ZoneType.INDOOR,0.1f, 0.1f, 30f, 6),
-            FloorItem.Table("t2", "T2", ZoneType.INDOOR,0.3f, 0.1f, 30f, 4),
-            FloorItem.Table("t3", "T3", ZoneType.INDOOR,0.1f, 0.25f, 30f, 4),
-            FloorItem.Table("t4", "T4", ZoneType.INDOOR,0.3f, 0.25f, 30f, 4),
-            FloorItem.Table("t5", "T5", ZoneType.INDOOR,0.1f, 0.5f, 25f, 2),
-            FloorItem.Table("t6", "T6", ZoneType.INDOOR,0.3f, 0.5f, 25f, 2),
-            FloorItem.Table("t7", "T7", ZoneType.INDOOR,0.1f, 0.6f, 25f, 2),
-            FloorItem.Table("t8", "T8", ZoneType.INDOOR,0.3f, 0.6f, 25f, 2),
-            FloorItem.Table("t9", "T9", ZoneType.INDOOR,0.1f, 0.7f, 25f, 2),
-            FloorItem.Table("t10", "T10", ZoneType.INDOOR,0.3f, 0.7f, 25f, 2),
-            FloorItem.Table("t11", "T11", ZoneType.INDOOR,0.1f, 0.85f, 25f, 6),
-            FloorItem.Table("t12", "T12", ZoneType.INDOOR,0.3f, 0.85f, 25f, 3),
-            FloorItem.Table("t13", "T13", ZoneType.INDOOR,0.5f, 0.85f, 25f, 3),
-            FloorItem.Table("t14", "T14", ZoneType.INDOOR,0.65f, 0.2f, 25f, 6),
-
-            FloorItem.Region("Serving", ZoneType.INDOOR, x = 0.45f, y = 0.3f,  width = 0.15f, height = 0.4f, color = Color.LightGray),
-            FloorItem.Region("Kitchen", ZoneType.INDOOR, x = 0.65f, y = 0.3f, width = 0.3f, height = 0.5f, color = Color.DarkGray),
-            FloorItem.Region("Cooler", ZoneType.INDOOR, x = 0.85f, y = 0.05f, width = 0.1f, height = 0.15f, color = Color.Cyan),
+fun TableSelectionScreen(
+    onNavigateToDetails: (String) -> Unit
+) {
 
 
-            FloorItem.Region("Door", ZoneType.INDOOR, x = 0.01f, y = 0.35f, width = 0.1f, height = 0.1f, color = Color(0xFF795548)),
+    val context = LocalContext.current
+    val application = context.applicationContext as Application
+
+     val tableViewModel: TableViewModel = viewModel(
+        factory = TableViewModelFactory(application)
+    )
+
+    val reservationViewModel: ReservationViewModel = viewModel(
+        factory = ReservationViewModelFactory(application)
+    )
 
 
-            FloorItem.Region("Toilet Male", ZoneType.INDOOR, x = 0.65f, y = 0.85f, width = 0.3f, height = 0.05f, color = Color(0xFF03A9F4)),
-            FloorItem.Region("Toilet Female", ZoneType.INDOOR, x = 0.65f, y = 0.91f, width = 0.3f, height = 0.05f, color = Color(0xFFE91E63)),
-            FloorItem.Region("Window", ZoneType.INDOOR, x = 0.5f, y = 0.02f, width = 0.2f, height = 0.05f, color = Color(0xFFB3E5FC)),
-            FloorItem.Region("Window", ZoneType.INDOOR, x = 0.15f, y = 0.95f, width = 0.2f, height = 0.05f, color = Color(0xFFB3E5FC))
 
-//            FloorItem.Table("t15", "T15", ZoneType.OUTDOOR, 0.6f, 0.1f, 30f, 2),
-//            FloorItem.Table("t16", "T16", ZoneType.OUTDOOR, 0.75f, 0.1f, 30f, 2),
-//            FloorItem.Table("t17", "T17", ZoneType.OUTDOOR, 0.6f, 0.25f, 30f, 4),
-//            FloorItem.Table("t18", "T18", ZoneType.OUTDOOR, 0.75f, 0.25f, 30f, 4),
-//            FloorItem.Table("t19", "T19", ZoneType.OUTDOOR, 0.6f, 0.4f, 30f, 6),
-//            FloorItem.Table("t20", "T20", ZoneType.OUTDOOR, 0.75f, 0.4f, 30f, 6),
-//            FloorItem.Table("t21", "T21", ZoneType.OUTDOOR, 0.6f, 0.6f, 25f, 2),
-//            FloorItem.Table("t22", "T22", ZoneType.OUTDOOR, 0.75f, 0.6f, 25f, 2),
-//            FloorItem.Table("t23", "T23", ZoneType.OUTDOOR, 0.6f, 0.75f, 25f, 4),
-//            FloorItem.Table("t24", "T24", ZoneType.OUTDOOR, 0.75f, 0.75f, 25f, 4),
-//            FloorItem.Table("t25", "T25", ZoneType.OUTDOOR, 0.6f, 0.9f, 25f, 6),
-//            FloorItem.Table("t26", "T26", ZoneType.OUTDOOR, 0.75f, 0.9f, 25f, 6),
-//
-//            FloorItem.Region("Fountain",ZoneType.OUTDOOR,0.01f, 0.05f, 0.4f, 0.2f, color = Color(0xFF64B5F6)),
-//
-//            FloorItem.Region("Door", ZoneType.OUTDOOR, x = 0.01f, y = 0.35f, width = 0.1f, height = 0.1f, color = Color(0xFF795548)),
 
-        )
+
+
+    val reservationTableViewModelFactory = remember {
+        ReservationTableViewModelFactory(tableViewModel, reservationViewModel)
     }
 
-    // --- 2. FIXED SIZE CALCULATIONS ---
+    val reservationTableViewModel: ReservationTableViewModel = viewModel(
+        factory = reservationTableViewModelFactory
+    )
+
+    val interactionViewModel: InteractionViewModel = viewModel()
+
+
+
+
+
+    TableSelectionScreenBody(
+        reservationTableViewModel = reservationTableViewModel,
+
+        interactionViewModel = interactionViewModel,
+        onNavigateToDetails = onNavigateToDetails
+    )
+
+}
+@RequiresApi(Build.VERSION_CODES.O)
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TableSelectionScreenBody(
+    reservationTableViewModel: ReservationTableViewModel,
+
+    interactionViewModel: InteractionViewModel,
+    onNavigateToDetails: (tableId: String) -> Unit
+) {
+
+
+    val reservationTableUiState by reservationTableViewModel.reservationTableUiState.collectAsState()
+    val reservationUiState by reservationTableViewModel.reservationUiState.collectAsState()
+    val tableUiState by reservationTableViewModel.tableUiState.collectAsState()
+
+
+//    val tableUiState by tableViewModel.uiState.collectAsState()
+    val interactionUi by interactionViewModel.uiState.collectAsState()
+
+    val scope = rememberCoroutineScope()
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    var currentTableForSheet by remember { mutableStateOf<TableEntity?>(null) }
+
     val boxWidth = 350.dp
     val boxHeight = 500.dp
     val density = LocalDensity.current
     val boxPxWidth = with(density) { boxWidth.toPx() }
     val boxPxHeight = with(density) { boxHeight.toPx() }
 
+    val scrollState = rememberScrollState()
 
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
 
-        Column {
+
+    Column(modifier = Modifier.fillMaxSize()) {
+
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(scrollState)
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+
+            Text(reservationUiState.selectedZone, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Spacer(modifier = Modifier.height(8.dp))
+
             Box(
                 modifier = Modifier
                     .size(boxWidth, boxHeight)
                     .border(2.dp, Color.Black)
                     .clipToBounds()
                     .background(Color(0xFFF8F8F8))
-                    // --- 3. GESTURE HANDLING ---
+
+
                     .pointerInput(Unit) {
-                        detectTapGestures { tapOffset ->
-                            // A. Transform "Touch Screen Point" -> "Map Point"
-                            // This math assumes the map starts at (0,0) and scales from top-left
-                            val mapX = (tapOffset.x - offset.x) / scale
-                            val mapY = (tapOffset.y - offset.y) / scale
+                        forEachGesture {
+                            awaitPointerEventScope {
+                                val firstDown = awaitFirstDown()
+                                var pointerIds = mutableSetOf(firstDown.id)
+                                var isZooming = false
 
-                            val clickedTable =
-                                floorItems.filterIsInstance<FloorItem.Table>().find { table ->
-                                    val tablePixelX = table.x * boxPxWidth
-                                    val tablePixelY = table.y * boxPxHeight
+                                do {
+                                    val event = awaitPointerEvent()
 
-                                    val distance = sqrt(
-                                        (mapX - tablePixelX).pow(2) +
-                                                (mapY - tablePixelY).pow(2)
-                                    )
+                                    // multi-touch
+                                    pointerIds = event.changes
+                                        .filter { it.pressed }
+                                        .map { it.id }
+                                        .toMutableSet()
 
-                                    // Hitbox Buffer: +60px to make it easier to press
-                                    distance < (table.radius + 60f)
-                                }
+                                    val isMultiTouch = pointerIds.size > 1
 
-                            if (clickedTable != null) {
-                                selectedTable = clickedTable
-                                scope.launch { sheetState.show() }
+                                    if (isMultiTouch) {
+                                        isZooming = true
+
+                                        interactionViewModel.onPinchGesture(
+                                            zoomFactor = event.calculateZoom(),
+                                            pan = event.calculatePan(),
+                                            centroid = event.calculateCentroid(),
+                                            boxWidthPx = boxPxWidth,
+                                            boxHeightPx = boxPxHeight
+                                        )
+
+                                        event.changes.forEach { it.consume() }
+                                    } else if (!isZooming) {
+                                        val pointer = event.changes.first()
+
+                                        val drag = pointer.positionChange()
+
+                                        if (drag != Offset.Zero && interactionUi.scale > 1f) {
+                                            interactionViewModel.onDragGesture(
+                                                dragAmount = drag,
+                                                boxWidthPx = boxPxWidth,
+                                                boxHeightPx = boxPxHeight
+                                            )
+                                            interactionViewModel.addMoveDistance(drag)
+                                            pointer.consume()
+                                        }
+
+                                        // tap detection
+                                        if (event.type == PointerEventType.Release) {
+                                            if (interactionUi.moveDistance < 5f) {
+                                                // Call ViewModel tap logic (from Step 1)
+                                                val tapX = (pointer.position.x - interactionUi.offset.x) / interactionUi.scale
+                                                val tapY = (pointer.position.y - interactionUi.offset.y) / interactionUi.scale
+
+                                                val tapResult = reservationTableViewModel.tableViewModel.onCanvasTap(
+                                                    tapX,
+                                                    tapY,
+                                                    boxPxWidth,
+                                                    boxPxHeight,
+                                                    reservationUiState.selectedZone
+                                                )
+
+                                                when (tapResult) {
+                                                    is TapResult.TableTapped -> {
+                                                        currentTableForSheet = tapResult.table
+                                                        scope.launch { sheetState.show() }
+                                                    }
+                                                    TapResult.PatioDoor -> reservationTableViewModel.reservationViewModel.toggleZone()
+                                                    TapResult.None -> Unit
+                                                }
+                                            }
+
+                                            interactionViewModel.resetMoveDistance()
+                                        }
+                                    }
+                                } while (pointerIds.isNotEmpty())
                             }
                         }
                     }
-                    .pointerInput(Unit) {
-                        detectTransformGestures { centroid, pan, zoom, _ ->
-                            val oldScale = scale
-                            val newScale = (scale * zoom).coerceIn(1f, 4f)
 
-                            // Standard Google Maps style zoom math
-                            val tempOffset =
-                                (offset - centroid) * (newScale / oldScale) + centroid + pan
-
-                            val scaledWidth = boxPxWidth * newScale
-                            val scaledHeight = boxPxHeight * newScale
-                            val minX = boxPxWidth - scaledWidth
-                            val minY = boxPxHeight - scaledHeight
-
-                            offset = Offset(
-                                x = tempOffset.x.coerceIn(minX, 0f),
-                                y = tempOffset.y.coerceIn(minY, 0f)
-                            )
-                            scale = newScale
-                        }
-                    }
             ) {
-                // --- 4. DRAWING ---
+
                 Canvas(
                     modifier = Modifier
                         .fillMaxSize()
                         .graphicsLayer(
-                            scaleX = scale,
-                            scaleY = scale,
-                            translationX = offset.x,
-                            translationY = offset.y,
-
+                            scaleX = interactionUi.scale,
+                            scaleY = interactionUi.scale,
+                            translationX = interactionUi.offset.x,
+                            translationY = interactionUi.offset.y,
                             transformOrigin = TransformOrigin(0f, 0f)
                         )
                 ) {
-                    floorItems.forEach { item ->
-                        when (item) {
-                            is FloorItem.Table -> {
-                                val tablePixelX = item.x * boxPxWidth
-                                val tablePixelY = item.y * boxPxHeight
+                    val selectedZone = reservationUiState.selectedZone
 
-                                val tableColor = when {
-                                    item.id == selectedTable?.id -> Color.Blue
-                                    item.status == TableStatus.Available -> Color.Green
-                                    item.status == TableStatus.Reserved -> Color.Red
-                                    else -> Color.Gray
-                                }
+                    // Draw tables
+                    tableUiState.tables
+                        .filter { it.zone.uppercase() == selectedZone }
+                        .forEach { table ->
+                            val px = table.xAxis * boxPxWidth
+                            val py = table.yAxis * boxPxHeight
 
-                                // 1. Draw the Circle (Ring)
-                                drawCircle(
-                                    color = tableColor,
-                                    radius = item.radius,
-                                    center = Offset(tablePixelX, tablePixelY),
-                                    style = Stroke(width = 5f)
-                                )
+                            val status ="Available"
 
-                                // 2. Draw the Text (Label) inside the circle
-                                val paint = Paint().apply {
-                                    textSize = 20f // Adjust text size to fit inside the circle
-                                    color = android.graphics.Color.BLACK
-                                    textAlign = Paint.Align.CENTER
-                                    typeface = Typeface.DEFAULT_BOLD
-                                }
-
-                                // Calculate vertical centering for the text
-                                // (descent + ascent) / 2 gives the distance from center to baseline
-                                val textOffset = (paint.descent() + paint.ascent()) / 2
-
-                                drawContext.canvas.nativeCanvas.drawText(
-                                    item.label,          // The text (e.g., "T1")
-                                    tablePixelX,         // Center X
-                                    tablePixelY - textOffset, // Center Y adjusted for text height
-                                    paint
-                                )
-
-                                // 3. Draw Seats (Chairs)
-                                val seatRadius = 20f
-                                val padding = 15f
-                                for (i in 0 until item.seatCount) {
-                                    val angle = (i * (2 * PI / item.seatCount)).toFloat()
-                                    val sX =
-                                        tablePixelX + (item.radius + seatRadius + padding) * cos(
-                                            angle
-                                        )
-                                    val sY =
-                                        tablePixelY + (item.radius + seatRadius + padding) * sin(
-                                            angle
-                                        )
-                                    drawCircle(Color.Gray, seatRadius, Offset(sX, sY))
-                                }
+                            val tableColor = when {
+                                tableUiState.selectedTables.contains(table) -> Color.Blue
+                                status == "Available" -> Color.Green
+                                status == "Reserved" -> Color.Red
+                                else -> Color.Gray
                             }
 
-                            is FloorItem.Region -> {
-                                val zLeft = item.x * boxPxWidth
-                                val zTop = item.y * boxPxHeight
-                                val zWidth = item.width * boxPxWidth
-                                val zHeight = item.height * boxPxHeight
+                            drawCircle(tableColor, table.radius, Offset(px, py), style = Stroke(5f))
 
-                                drawRect(item.color, Offset(zLeft, zTop), Size(zWidth, zHeight))
 
+                            val paint = Paint().apply {
+                                textSize = 20f
+                                color =android.graphics.Color.BLACK
+                                textAlign = Paint.Align.CENTER
+                                typeface = Typeface.DEFAULT_BOLD
+                            }
+                            val textOffset = (paint.descent() + paint.ascent()) / 2
+                            drawContext.canvas.nativeCanvas.drawText(
+                                table.label, px, py - textOffset, paint
+                            )
+
+                            // Draw seats
+                            val seatR = 20f
+                            val pad = 15f
+                            repeat(table.seatCount) { i ->
+                                val angle = (i * (2 * PI / table.seatCount)).toFloat()
+                                val sx = px + (table.radius + seatR + pad) * cos(angle)
+                                val sy = py + (table.radius + seatR + pad) * sin(angle)
+                                drawCircle(Color.Gray, seatR, Offset(sx, sy))
+                            }
+                        }
+
+                    // Draw regions
+                    tableUiState.regions
+                        .filter { it.zone.uppercase() == selectedZone }
+                        .forEach { r ->
+                            val left = r.xAxis * boxPxWidth
+                            val top = r.yAxis * boxPxHeight
+                            val w = r.width * boxPxWidth
+                            val h = r.height * boxPxHeight
+
+                            drawRect(Color(r.color.toInt()), Offset(left, top), Size(w, h))
+
+                            val paint = Paint().apply {
+                                textSize = 32f
+                                textAlign = Paint.Align.CENTER
+                                color = android.graphics.Color.BLACK
+                                typeface = Typeface.DEFAULT_BOLD
+                            }
+
+                            val lines = r.label.split("\n")
+                            val lineHeight = paint.fontSpacing
+                            val startY = top + h / 2 - (lines.size - 1) * lineHeight / 2
+
+                            lines.forEachIndexed { i, line ->
                                 drawContext.canvas.nativeCanvas.drawText(
-                                    item.label,
-                                    zLeft + zWidth / 2,
-                                    zTop + zHeight / 2 + 15f,
-                                    Paint().apply {
-                                        textSize = 32f; textAlign = Paint.Align.CENTER
-                                    }
+                                    line,
+                                    left + w / 2,
+                                    startY + i * lineHeight,
+                                    paint
+                                )
+                            }
+                        }
+                }
+            }
+
+            // Remarks
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, top = 12.dp, bottom = 16.dp)
+            ) {
+                Text("Remark:", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                remarkMessage(Color.Green, "T0", "Table Available")
+                remarkMessage(Color.Red, "T0", "Table Reserved")
+                remarkMessage(Color.Blue, "T0", "Table Selected")
+            }
+        }
+
+         SelectedTablesSummarySection(
+            selectedTables = tableUiState.selectedTables,
+            onRemove = { reservationTableViewModel.tableViewModel.removeTable(it) },
+            onClear = { reservationTableViewModel.tableViewModel.clearSelection() }
+        )
+
+
+        Button(
+            onClick = { /* Reserve */ },
+            modifier = Modifier.fillMaxWidth().padding(8.dp)
+        ) {
+            Text("Reserve")
+        }
+    }
+
+    currentTableForSheet?.let { table ->
+        ModalBottomSheet(
+            onDismissRequest = { currentTableForSheet = null },
+            sheetState = sheetState,
+            dragHandle = { BottomSheetDefaults.DragHandle() }
+        ) {
+            TableBottomSheetContent(
+                table = table,
+                tableViewModel = reservationTableViewModel.tableViewModel,
+                tableUiState = tableUiState,
+                onSelect = {
+                    reservationTableViewModel.tableViewModel.toggleTable(table)
+                    currentTableForSheet = null
+                },
+                onNavigateToDetails = onNavigateToDetails,
+                scope = scope,
+                sheetState = sheetState
+            )
+        }
+    }
+
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TableBottomSheetContent(
+    table: TableEntity,
+    tableViewModel: TableViewModel,
+    tableUiState: TableUiState,
+    onSelect: () -> Unit,
+    onNavigateToDetails: (String) -> Unit,
+    scope: CoroutineScope,
+    sheetState: SheetState
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(24.dp)
+    ) {
+        Text(table.label, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(12.dp))
+
+        val nearRegions = tableViewModel.findNearRegions(table, tableUiState.regions)
+        val price = table.seatCount * 10
+
+        if (nearRegions.isNotEmpty()) {
+            Text(
+                "Near Region: ${nearRegions.joinToString()}",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Medium
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+
+        Text("Total Price: RM ${"%.2f".format(price.toFloat())}", fontSize = 18.sp, fontWeight = FontWeight.Medium)
+        Spacer(modifier = Modifier.height(12.dp))
+//        Text("Status: ${table.status}", fontSize = 18.sp, fontWeight = FontWeight.Medium)
+//        Spacer(modifier = Modifier.height(12.dp))
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable {
+                    onNavigateToDetails(table.tableId)
+                    scope.launch { sheetState.hide() }
+                }
+                .padding(vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Default.Info, contentDescription = "View Details", tint = MaterialTheme.colorScheme.primary)
+            Spacer(modifier = Modifier.width(12.dp))
+            Text("View Details", fontSize = 18.sp, color = MaterialTheme.colorScheme.primary)
+        }
+
+        Divider()
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Button(
+            onClick = {
+                onSelect()
+                scope.launch { sheetState.hide() }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Select")
+        }
+    }
+}
+
+@Composable
+fun SelectedTablesSummarySection(
+    selectedTables: Set<TableEntity>,
+    onRemove: (TableEntity) -> Unit,
+    onClear: () -> Unit
+) {
+    if (selectedTables.isNotEmpty()) {
+        var expanded by remember { mutableStateOf(false) }
+
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = Color(0xFFEFEFEF),
+            shadowElevation = 4.dp
+        ) {
+            Column(modifier = Modifier.padding(12.dp)) {
+
+                // Summary row
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { expanded = !expanded },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "Selected: ${selectedTables.size} tables • ${selectedTables.sumOf { it.seatCount }} seats",
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 15.sp
+                        )
+                        Text(
+                            "Total: RM ${"%.2f".format(selectedTables.sumOf { it.seatCount * 10 }.toFloat())}",
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+
+                    // Collapse arrow
+                    Icon(
+                        imageVector = if (expanded) Icons.Default.KeyboardArrowUp
+                        else Icons.Default.KeyboardArrowDown,
+                        contentDescription = "Toggle",
+                        tint = Color.Black
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Expandable list of selected tables
+                AnimatedVisibility(visible = expanded) {
+                    Column(modifier = Modifier.padding(top = 6.dp)) {
+                        selectedTables.forEach { table ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 6.dp)
+                            ) {
+
+                                Canvas(modifier = Modifier.size(20.dp)) {
+                                    drawCircle(
+                                        color = when ("Available") {
+                                            "Available"-> Color.Blue
+                                            "Reserved" -> Color.Red
+                                            else -> Color.Gray
+                                        }
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.width(10.dp))
+
+                                Text(
+                                    "${table.label} (${table.seatCount} seats)",
+                                    fontSize = 14.sp,
+                                    modifier = Modifier.weight(1f)
+                                )
+
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Remove",
+                                    tint = Color.Red,
+                                    modifier = Modifier
+                                        .size(22.dp)
+                                        .clickable { onRemove(table) }
                                 )
                             }
                         }
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(8.dp)) // space between box and text
-             Text(
-                text = "Remark:",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(end = 8.dp) // Add spacing after the header
-            )
+                Spacer(modifier = Modifier.height(8.dp))
 
-            Column {
-                remarkMessage(
-                    tableColor = Color.Green,
-                    tableLabel = "T0",
-                    statusText = "Table Available"
-                )
-
-                // --- Use the Reusable Composable for Unavailable Tables ---
-                remarkMessage(
-                    tableColor = Color.Red,
-                    tableLabel = "T0",
-                    statusText = "Table Reserved"
-                )
-
-                // --- Use the Reusable Composable for Unavailable Tables ---
-                remarkMessage(
-                    tableColor = Color.Blue,
-                    tableLabel = "T0",
-                    statusText = "Table be Selected"
-                )
-            }
-
-
-        }
-
-        selectedTable?.let { table ->
-            ModalBottomSheet(
-                onDismissRequest = { selectedTable = null },
-                sheetState = sheetState
-            ) {
-                Column(modifier = Modifier.padding(32.dp)) {
-                    Text("Table: ${table.label}", fontSize = 24.sp)
-                    Button(
-                        onClick = { /* Reserve */ },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 16.dp)
-                    ) { Text("Reserve") }
+                // Clear All
+                Row(
+                    horizontalArrangement = Arrangement.End,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        "Clear All",
+                        color = Color.Red,
+                        fontSize = 14.sp,
+                        modifier = Modifier.clickable { onClear() }
+                    )
                 }
             }
         }
-
-
-
-
-
-
-
     }
-
-
-
-
 }
 
 @Composable
-fun remarkMessage(
-    tableColor: Color,
-    tableLabel: String,
-    statusText: String
-) {
+fun remarkMessage(tableColor: Color, tableLabel: String, statusText: String) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 16.dp)) {
-        Canvas(
-            modifier = Modifier
-                .size(30.dp, 20.dp) // Maintain size consistency
-                .padding(end = 4.dp)
-        ) {
+        Canvas(modifier = Modifier.size(30.dp, 20.dp).padding(end = 4.dp)) {
             val radius = size.minDimension / 2
             val centerX = size.minDimension / 2
             val centerY = size.minDimension / 2
 
-            // Draw the colored circle ring
-            drawCircle(
-                color = tableColor,
-                radius = radius,
-                center = Offset(centerX, centerY),
-                style = Stroke(width = 3f)
-            )
+            drawCircle(color = tableColor, radius = radius, center = Offset(centerX, centerY), style = Stroke(width = 3f))
 
-            // Draw the fixed label text (T0)
             val paint = Paint().apply {
                 textSize = 20f
                 color = android.graphics.Color.BLACK
@@ -348,37 +573,83 @@ fun remarkMessage(
                 typeface = Typeface.DEFAULT_BOLD
             }
             val textOffset = (paint.descent() + paint.ascent()) / 2
-
-            drawContext.canvas.nativeCanvas.drawText(
-                tableLabel, // Use the provided label
-                centerX,
-                centerY - textOffset,
-                paint
-            )
+            drawContext.canvas.nativeCanvas.drawText(tableLabel, centerX, centerY - textOffset, paint)
         }
 
-        Text(
-            text = "-> $statusText",
-            fontSize = 14.sp
-        )
+        Text(text = "-> $statusText", fontSize = 14.sp)
     }
 }
 
-fun distance(x1: Float, y1: Float, x2: Float, y2: Float): Float {
-    return sqrt((x1 - x2).pow(2) + (y1 - y2).pow(2))
-}
 
-fun findTablesNearRegion(
-    tables: List<FloorItem.Table>,
-    region: FloorItem.Region,
-    maxDistance: Float = 0.2f
-): List<FloorItem.Table> {
-    val centerX = region.x + region.width / 2
-    val centerY = region.y + region.height / 2
 
-    return tables
-        .map { it to distance(it.x, it.y, centerX, centerY) }
-        .filter { (_, d) -> d <= maxDistance }
-        .sortedBy { it.second }
-        .map { it.first }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+fun handleTap(
+    event: PointerEvent,
+    tableUi: TableUiState,
+    reservationUi: ReservationUiState,
+    onZoneChange: (String) -> Unit,
+    interactionUi: InteractionUiState,
+    boxPxWidth: Float,
+    boxPxHeight: Float,
+    onTableSelected: (TableEntity) -> Unit
+) {
+    val tapOffset = event.changes.first().position
+    val mapX = (tapOffset.x - interactionUi.offset.x) / interactionUi.scale
+    val mapY = (tapOffset.y - interactionUi.offset.y) / interactionUi.scale
+
+    val zone = reservationUi.selectedZone
+
+    // PATIO DOOR first
+    tableUi.regions.filter { it.zone.uppercase() == zone }
+        .forEach { region ->
+            val left = region.xAxis * boxPxWidth
+            val top = region.yAxis * boxPxHeight
+            val right = left + region.width * boxPxWidth
+            val bottom = top + region.height * boxPxHeight
+
+            if (region.label == "Patio\nDoor" &&
+                mapX in left..right && mapY in top..bottom
+            ) {
+                onZoneChange(if (zone == "INDOOR") "OUTDOOR" else "INDOOR")
+                return
+            }
+        }
+
+    tableUi.tables.filter { it.zone.uppercase() == zone }
+        .find { table ->
+            val tx = table.xAxis * boxPxWidth
+            val ty = table.yAxis * boxPxHeight
+
+            val d = hypot(mapX - tx, mapY - ty)
+            d < table.radius + 60f
+        }
+        ?.let { onTableSelected(it) }
 }

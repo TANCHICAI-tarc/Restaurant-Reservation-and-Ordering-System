@@ -1,15 +1,17 @@
 package com.example.yumyumrestaurant.Reservation
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import com.example.yumyumrestaurant.data.CustomerEntity
 import com.example.yumyumrestaurant.data.ReservationData.ReservationEntity
 import com.example.yumyumrestaurant.data.TableData.TableEntity
 import java.time.LocalDate
 import java.time.LocalTime
-
+@RequiresApi(Build.VERSION_CODES.O)
 data class ReservationUiState (
 
     val reservations: List<ReservationEntity> = emptyList(),
-    
+
     val selectedTables: List<TableEntity> = emptyList(),
 
 
@@ -39,7 +41,5 @@ data class ReservationUiState (
     val selectedZone: String = "INDOOR",
 
     val customer: CustomerEntity = CustomerEntity(),
-
-
-
+    val reservationFee: Double = 0.0
     )

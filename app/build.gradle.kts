@@ -46,11 +46,16 @@ android {
 
 dependencies {
 
-    implementation("androidx.compose.material:material-icons-extended")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose")
+    implementation(platform("com.google.firebase:firebase-bom:34.6.0"))
+    implementation("com.google.firebase:firebase-analytics")
+    implementation("com.google.firebase:firebase-firestore")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
+    //implementation("com.google.firebase:firebase-firestore-ktx")
     implementation("androidx.room:room-ktx:2.6.0")
-    implementation ("androidx.room:room-runtime:2.6.0")
-    kapt ("androidx.room:room-compiler:2.6.0")
+    implementation("androidx.room:room-runtime:2.6.0")
+    kapt("androidx.room:room-compiler:2.6.0")
+    implementation("io.coil-kt:coil-compose:2.6.0")
+    implementation("androidx.navigation:navigation-compose:2.8.0")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -59,8 +64,7 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-    implementation(libs.androidx.navigation.compose.android)
-
+    implementation("androidx.compose.material:material-icons-extended-android:1.6.8")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
@@ -70,11 +74,14 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
-    implementation(platform("com.google.firebase:firebase-bom:34.2.0"))
-    implementation("com.google.firebase:firebase-analytics")
 
-    implementation("com.google.firebase:firebase-auth")
-    // Firestore
-    implementation("com.google.firebase:firebase-firestore-ktx:24.9.1")
 
+    implementation("io.coil-kt:coil-compose:2.7.0")
+
+    implementation("androidx.annotation:annotation-experimental:1.3.1")
+
+}
+
+configurations.configureEach {
+    exclude(group = "androidx.annotation", module = "annotation-experimental")
 }

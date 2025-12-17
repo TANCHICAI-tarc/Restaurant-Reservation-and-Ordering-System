@@ -1,4 +1,4 @@
-//package com.example.yumyumrestaurant.data.TableData
+package com.example.yumyumrestaurant.data.TableData//package com.example.yumyumrestaurant.data.TableData
 //
 //import android.content.Context
 //import androidx.room.Database

@@ -1,5 +1,6 @@
 package com.example.yumyumrestaurant.data
 
+import android.net.Uri
 import androidx.compose.ui.graphics.Color
 import androidx.room.TypeConverter
 import com.example.yumyumrestaurant.data.TableData.TableStatus
@@ -9,7 +10,7 @@ import java.time.LocalTime
 
 class Converters {
 
-
+    // --- ENUM CONVERTERS (Standard String-based) ---
     @TypeConverter
     fun fromZoneType(zone: ZoneType): String = zone.name
 
@@ -22,37 +23,56 @@ class Converters {
     @TypeConverter
     fun toTableStatus(name: String): TableStatus = TableStatus.valueOf(name)
 
-
+    // --- COMPOSE COLOR CONVERTERS (Uses Long value) ---
     @TypeConverter
     fun fromColor(color: Color): Long = color.value.toLong()
 
     @TypeConverter
     fun toColor(value: Long): Color = Color(value)
 
-
+    // --- LOCAL DATE CONVERTERS (Uses Long: Epoch Day - RECOMMENDED) ---
     @TypeConverter
-    fun fromLocalDate(value: LocalDate?): String? {
-        return value?.toString()
+    fun fromLongToLocalDate(value: Long?): LocalDate? {
+        return value?.let { LocalDate.ofEpochDay(it) }
     }
 
     @TypeConverter
-    fun toLocalDate(value: String?): LocalDate? {
-        return value?.let { LocalDate.parse(it) }
+    fun fromLocalDateToLong(date: LocalDate?): Long? {
+        return date?.toEpochDay()
+    }
+
+    // --- LOCAL TIME CONVERTERS (Uses Long: Nano of Day - RECOMMENDED) ---
+    // This is the corrected robust approach for LocalTime.
+    @TypeConverter
+    fun fromLongToLocalTime(value: Long?): LocalTime? {
+        return value?.let { LocalTime.ofNanoOfDay(it) }
     }
 
     @TypeConverter
-    fun fromLocalTime(value: LocalTime?): String? {
-        return value?.toString()
+    fun fromLocalTimeToLong(time: LocalTime?): Long? {
+        return time?.toNanoOfDay()
     }
 
     @TypeConverter
-    fun toLocalTime(value: String?): LocalTime? {
-        return value?.let { LocalTime.parse(it) }
+    fun fromStringList(value: List<String>): String {
+        return value.joinToString(",")
     }
 
+    @TypeConverter
+    fun toStringList(value: String): List<String> {
+        return if (value.isEmpty()) emptyList() else value.split(",")
+    }
+
+    @TypeConverter
+    fun fromUriList(uris: List<Uri>?): String? {
+        return uris?.joinToString(",") { it.toString() }
+    }
+
+    @TypeConverter
+    fun toUriList(data: String?): List<Uri>? {
+        return data?.split(",")?.map { Uri.parse(it) }
+    }
 }
-
-
 
 
 

@@ -30,7 +30,15 @@ interface ReservationDao {
     @Query("DELETE FROM Reservations")
     suspend fun clearAllReservations()
 
-    @Transaction
-    @Query("SELECT * FROM reservations WHERE date = :date")
-    suspend fun getReservationsWithTables(date: LocalDate): List<ReservationWithTables>
+
+
+    @Query("""
+        SELECT R.*
+        FROM Reservations R
+        INNER JOIN Reservation_Table AS X ON R.reservationId = X.reservationId
+        WHERE X.tableId = :tableId 
+          AND R.date = :date 
+          AND R.reservationStatus = 'CONFIRMED'
+    """)
+    suspend fun getConfirmedReservationsForTableOnDate(tableId: String, date: LocalDate): List<ReservationEntity>
 }

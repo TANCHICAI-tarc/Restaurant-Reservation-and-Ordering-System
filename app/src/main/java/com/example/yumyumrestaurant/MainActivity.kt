@@ -13,31 +13,30 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
+import com.example.yumyumrestaurant.OrderProcess.MenuViewModel
+import com.example.yumyumrestaurant.OrderProcess.OrderViewModel
+import com.example.yumyumrestaurant.OrderProcess.StaffUpdate.StaffMenuViewModel
 import com.example.yumyumrestaurant.Reservation.ReservationViewModel
-import com.example.yumyumrestaurant.ReservationTable.ReservationConfirmationScreen
-//import com.example.yumyumrestaurant.TableSelectionScreen.TableSelectionScreen
-
-import com.example.yumyumrestaurant.ui.theme.YumYumRestaurantTheme
-import com.google.firebase.FirebaseApp
+import com.example.yumyumrestaurant.ui.theme.YumyumrestaurantTheme
 
 class MainActivity : ComponentActivity() {
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        FirebaseApp.initializeApp(this)
-
         setContent {
-            YumYumRestaurantTheme {
+            YumyumrestaurantTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-
+                    val staffMenuViewModel: StaffMenuViewModel = viewModel()
+                    val navController = rememberNavController()
+                    //StaffMenuNavigation(staffMenuViewModel, navController)
                     YumYumRestaurantApp()
-//                    TableSelectionScreen()
-//                    ReservationConfirmationScreen()
-                }
 
+                    //CustomerOrderNavigation(menuViewModel,orderViewModel, navController)
+                }
             }
         }
     }
@@ -48,10 +47,31 @@ class MainActivity : ComponentActivity() {
 fun YumYumRestaurantApp() {
 
     val navController = rememberNavController()
+    val menuViewModel: MenuViewModel = viewModel()
+    val orderViewModel: OrderViewModel = viewModel()
+    val reservationViewModel: ReservationViewModel = viewModel()
 
     TableReservationNavigation(
-
+        reservationViewModel = reservationViewModel,
+        menuViewModel = menuViewModel,
+        orderViewModel = orderViewModel,
         navController = navController,
         modifier = Modifier.fillMaxSize()
     )
 }
+
+/*@Composable
+fun Greeting(name: String, modifier: Modifier = Modifier) {
+    Text(
+        text = "Hello $name!",
+        modifier = modifier
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+fun GreetingPreview() {
+    YumyumrestaurantTheme {
+        Greeting("Android")
+    }
+}*/

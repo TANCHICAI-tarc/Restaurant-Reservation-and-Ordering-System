@@ -19,6 +19,21 @@ class ReservationRepository(private val reservationDao: ReservationDao) {
         firestore.collection("Reservations").document(reservation.reservationId).set(reservation).await()
     }
 
+    suspend fun generateReservationID(): String {
+        val documentRef = firestore.collection("Counters").document("reservation_counter")
+
+        return firestore.runTransaction { transaction ->
+            val snapshot = transaction.get(documentRef)
+            val lastRes = snapshot.getLong("lastReservation") ?: 0
+            val newRes = lastRes + 1
+
+            transaction.update(documentRef, "lastReservation", newRes)
+
+            String.format("R%04d", newRes)
+        }.await()
+    }
+
+
     // Fetch all from Firestore and save to Room
     suspend fun syncTablesFromFirebase() {
         val snapshot = firestore.collection("Reservations").get().await()
@@ -31,9 +46,10 @@ class ReservationRepository(private val reservationDao: ReservationDao) {
         }
     }
 
-    suspend fun getReservationIdById(reservationId: String): ReservationEntity? {
-        return reservationDao.getReservationIdById(reservationId)
+    suspend fun getConfirmedReservationsForTableOnDate(tableId: String, date: LocalDate): List<ReservationEntity> {
+        return reservationDao.getConfirmedReservationsForTableOnDate(tableId,date)
     }
+
 
 
 //    suspend fun updateTable(table: ReservationEntity) {

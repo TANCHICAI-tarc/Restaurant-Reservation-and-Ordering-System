@@ -1,5 +1,15 @@
 <resources>
-    <string name="app_name">YumYum Restaurant</string>
+    <string name="app_name">yumyumrestaurant</string>
+    <string name="title_menu_selection">Menu Selection</string>
+    <string name="title_menu_details">Menu Details</string>
+    <string name="title_cart_info">Cart Info</string>
+    <string name="title_payment">Payment</string>
+    <string name="title_order_success">Order Success</string>
+    <string name="back_button">Back</string>
+    <string name="decrease">Decrease</string>
+    <string name="increase">Increase</string>"
+    <string name="title_reservation_list">Reservation List</string>
+    <string name="title_reservation_details">Reservation Details</string>
     <string name="title_reservation_form">Reservation Form</string>
     <string name="title_select_table_zone">Select Table</string>
     <string name="title_table_details">View Table Detail</string>

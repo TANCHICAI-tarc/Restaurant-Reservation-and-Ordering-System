@@ -65,7 +65,10 @@ import kotlin.math.*
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun TableSelectionScreen(
-    onNavigateToDetails: (String) -> Unit
+    reservationViewModel: ReservationViewModel,
+    guestCount: Int,
+    onNavigateToDetails: (String) -> Unit,
+    onReserve: () -> Unit
 ) {
 
 
@@ -76,13 +79,13 @@ fun TableSelectionScreen(
         factory = TableViewModelFactory(application)
     )
 
-    val reservationViewModel: ReservationViewModel = viewModel(
+    /*val reservationViewModel: ReservationViewModel = viewModel(
         factory = ReservationViewModelFactory(application)
-    )
+    )*/
 
-
-
-
+    LaunchedEffect(guestCount) {
+        reservationViewModel.setGuestCount(guestCount)
+    }
 
 
     val reservationTableViewModelFactory = remember {
@@ -99,11 +102,12 @@ fun TableSelectionScreen(
 
 
 
+
     TableSelectionScreenBody(
         reservationTableViewModel = reservationTableViewModel,
-
         interactionViewModel = interactionViewModel,
-        onNavigateToDetails = onNavigateToDetails
+        onNavigateToDetails = onNavigateToDetails,
+        onReserve = onReserve
     )
 
 }
@@ -112,9 +116,9 @@ fun TableSelectionScreen(
 @Composable
 fun TableSelectionScreenBody(
     reservationTableViewModel: ReservationTableViewModel,
-
     interactionViewModel: InteractionViewModel,
-    onNavigateToDetails: (tableId: String) -> Unit
+    onNavigateToDetails: (tableId: String) -> Unit,
+    onReserve: () -> Unit
 ) {
 
 
@@ -122,7 +126,9 @@ fun TableSelectionScreenBody(
     val reservationUiState by reservationTableViewModel.reservationUiState.collectAsState()
     val tableUiState by reservationTableViewModel.tableUiState.collectAsState()
 
-
+    LaunchedEffect(tableUiState.selectedTables) {
+        reservationTableViewModel.reservationViewModel.updateReservationFee(tableUiState.selectedTables)
+    }
 //    val tableUiState by tableViewModel.uiState.collectAsState()
     val interactionUi by interactionViewModel.uiState.collectAsState()
 
@@ -139,7 +145,8 @@ fun TableSelectionScreenBody(
 
     val scrollState = rememberScrollState()
 
-
+    val totalSelectedSeats = tableUiState.selectedTables.sumOf { it.seatCount }
+    val canReserve = tableUiState.selectedTables.isNotEmpty() && totalSelectedSeats >= reservationUiState.guestCount
 
     Column(modifier = Modifier.fillMaxSize()) {
 
@@ -347,12 +354,22 @@ fun TableSelectionScreenBody(
          SelectedTablesSummarySection(
             selectedTables = tableUiState.selectedTables,
             onRemove = { reservationTableViewModel.tableViewModel.removeTable(it) },
-            onClear = { reservationTableViewModel.tableViewModel.clearSelection() }
+            onClear = { reservationTableViewModel.tableViewModel.clearSelection() },
+             reservationTableViewModel.reservationViewModel
         )
 
-
         Button(
-            onClick = { /* Reserve */ },
+            enabled = canReserve,
+            onClick = {
+                val selectedTables = tableUiState.selectedTables
+
+                if (selectedTables.isNotEmpty()) {
+                    reservationTableViewModel.reservationViewModel.setSelectedTables(
+                        tableUiState.selectedTables.toList()
+                    )
+                    onReserve()
+                }
+            },
             modifier = Modifier.fillMaxWidth().padding(8.dp)
         ) {
             Text("Reserve")
@@ -382,6 +399,7 @@ fun TableSelectionScreenBody(
 
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TableBottomSheetContent(
@@ -452,8 +470,10 @@ fun TableBottomSheetContent(
 fun SelectedTablesSummarySection(
     selectedTables: Set<TableEntity>,
     onRemove: (TableEntity) -> Unit,
-    onClear: () -> Unit
+    onClear: () -> Unit,
+    reservationViewModel: ReservationViewModel
 ) {
+    val reservationUiState by reservationViewModel.uiState.collectAsState()
     if (selectedTables.isNotEmpty()) {
         var expanded by remember { mutableStateOf(false) }
 
@@ -478,9 +498,10 @@ fun SelectedTablesSummarySection(
                             fontSize = 15.sp
                         )
                         Text(
-                            "Total: RM ${"%.2f".format(selectedTables.sumOf { it.seatCount * 10 }.toFloat())}",
+                            "Reservation Fee: RM ${"%.2f".format(reservationUiState.reservationFee)}",
                             fontSize = 14.sp,
-                            color = MaterialTheme.colorScheme.primary
+                            fontWeight = FontWeight.Medium,
+                            color = Color.DarkGray
                         )
                     }
 
@@ -578,78 +599,4 @@ fun remarkMessage(tableColor: Color, tableLabel: String, statusText: String) {
 
         Text(text = "-> $statusText", fontSize = 14.sp)
     }
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-fun handleTap(
-    event: PointerEvent,
-    tableUi: TableUiState,
-    reservationUi: ReservationUiState,
-    onZoneChange: (String) -> Unit,
-    interactionUi: InteractionUiState,
-    boxPxWidth: Float,
-    boxPxHeight: Float,
-    onTableSelected: (TableEntity) -> Unit
-) {
-    val tapOffset = event.changes.first().position
-    val mapX = (tapOffset.x - interactionUi.offset.x) / interactionUi.scale
-    val mapY = (tapOffset.y - interactionUi.offset.y) / interactionUi.scale
-
-    val zone = reservationUi.selectedZone
-
-    // PATIO DOOR first
-    tableUi.regions.filter { it.zone.uppercase() == zone }
-        .forEach { region ->
-            val left = region.xAxis * boxPxWidth
-            val top = region.yAxis * boxPxHeight
-            val right = left + region.width * boxPxWidth
-            val bottom = top + region.height * boxPxHeight
-
-            if (region.label == "Patio\nDoor" &&
-                mapX in left..right && mapY in top..bottom
-            ) {
-                onZoneChange(if (zone == "INDOOR") "OUTDOOR" else "INDOOR")
-                return
-            }
-        }
-
-    tableUi.tables.filter { it.zone.uppercase() == zone }
-        .find { table ->
-            val tx = table.xAxis * boxPxWidth
-            val ty = table.yAxis * boxPxHeight
-
-            val d = hypot(mapX - tx, mapY - ty)
-            d < table.radius + 60f
-        }
-        ?.let { onTableSelected(it) }
 }

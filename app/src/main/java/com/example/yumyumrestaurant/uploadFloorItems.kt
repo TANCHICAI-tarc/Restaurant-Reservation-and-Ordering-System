@@ -23,7 +23,8 @@
 //        val xAxis: Float = 0f,
 //        val yAxis: Float = 0f,
 //        val radius: Float = 0f,
-//        val seatCount: Int = 0
+//        val seatCount: Int = 0,
+//        var imageUrls: List<String> = emptyList()
 //
 //    ) : FloorItem()
 //
@@ -52,7 +53,8 @@
 //            "xAxis" to xAxis,
 //            "yAxis" to yAxis,
 //            "radius" to radius,
-//            "seatCount" to seatCount
+//            "seatCount" to seatCount,
+//            "imageUrls" to imageUrls
 //        )
 //        is FloorItem.Region -> mapOf(
 //            "type" to "Region",
@@ -94,38 +96,54 @@
 //@RequiresApi(Build.VERSION_CODES.O)
 //@Composable
 //fun TableSelectionScreen() {
+//    val tableImages = listOf(
+//        "https://images.pexels.com/photos/2451264/pexels-photo-2451264.jpeg",
+//        "https://images.pexels.com/photos/827528/pexels-photo-827528.jpeg",
+//        "https://images.pexels.com/photos/914388/pexels-photo-914388.jpeg",
+//        "https://images.pexels.com/photos/460537/pexels-photo-460537.jpeg"
+//    )
+//    val outdoorImages = listOf(
+//        "https://images.pexels.com/photos/18252321/pexels-photo-18252321.jpeg",
+//        "https://images.pexels.com/photos/3201920/pexels-photo-3201920.jpeg",
+//        "https://images.pexels.com/photos/2956952/pexels-photo-2956952.jpeg"
+//    )
 //    val floorItems = remember {
 //        mutableStateListOf<FloorItem>(
 //            // --- Outdoor Tables ---
-//            FloorItem.Table("T0001", "T1", ZoneType.INDOOR, 0.1f, 0.1f, 30f, 6),
-//            FloorItem.Table("T0002", "T2", ZoneType.INDOOR, 0.3f, 0.1f, 30f, 4),
-//            FloorItem.Table("T0003", "T3", ZoneType.INDOOR, 0.1f, 0.25f, 30f, 4),
-//            FloorItem.Table("T0004", "T4", ZoneType.INDOOR, 0.3f, 0.25f, 30f, 4),
-//            FloorItem.Table("T0005", "T5", ZoneType.INDOOR, 0.1f, 0.5f, 25f, 2),
-//            FloorItem.Table("T0006", "T6", ZoneType.INDOOR, 0.3f, 0.5f, 25f, 2),
-//            FloorItem.Table("T0007", "T7", ZoneType.INDOOR, 0.1f, 0.6f, 25f, 2),
-//            FloorItem.Table("T0008", "T8", ZoneType.INDOOR, 0.3f, 0.6f, 25f, 2),
-//            FloorItem.Table("T0009", "T9", ZoneType.INDOOR, 0.1f, 0.7f, 25f, 2),
-//            FloorItem.Table("T0010", "T10", ZoneType.INDOOR, 0.3f, 0.7f, 25f, 2),
-//            FloorItem.Table("T0011", "T11", ZoneType.INDOOR, 0.1f, 0.85f, 25f, 6),
-//            FloorItem.Table("T0012", "T12", ZoneType.INDOOR, 0.3f, 0.85f, 25f, 3),
-//            FloorItem.Table("T0013", "T13", ZoneType.INDOOR, 0.5f, 0.85f, 25f, 3),
-//            FloorItem.Table("T0014", "T14", ZoneType.INDOOR, 0.65f, 0.2f, 25f, 6),
+//            FloorItem.Table("T0001", "T1", ZoneType.INDOOR, 0.1f, 0.1f, 30f, 6, imageUrls = tableImages),
+//            FloorItem.Table("T0002", "T2", ZoneType.INDOOR, 0.3f, 0.1f, 30f, 4, imageUrls = tableImages),
+//            FloorItem.Table("T0003", "T3", ZoneType.INDOOR, 0.1f, 0.25f, 30f, 4, imageUrls = tableImages),
+//            FloorItem.Table("T0004", "T4", ZoneType.INDOOR, 0.3f, 0.25f, 30f, 4, imageUrls = tableImages),
+//            FloorItem.Table("T0005", "T5", ZoneType.INDOOR, 0.1f, 0.5f, 25f, 2, imageUrls = tableImages),
+//            FloorItem.Table("T0006", "T6", ZoneType.INDOOR, 0.3f, 0.5f, 25f, 2, imageUrls = tableImages),
+//            FloorItem.Table("T0007", "T7", ZoneType.INDOOR, 0.1f, 0.6f, 25f, 2, imageUrls = tableImages),
+//            FloorItem.Table("T0008", "T8", ZoneType.INDOOR, 0.3f, 0.6f, 25f, 2, imageUrls = tableImages),
+//            FloorItem.Table("T0009", "T9", ZoneType.INDOOR, 0.1f, 0.7f, 25f, 2, imageUrls = tableImages),
+//            FloorItem.Table("T0010", "T10", ZoneType.INDOOR, 0.3f, 0.7f, 25f, 2, imageUrls = tableImages),
+//            FloorItem.Table("T0011", "T11", ZoneType.INDOOR, 0.1f, 0.85f, 25f, 6, imageUrls = tableImages),
+//            FloorItem.Table("T0012", "T12", ZoneType.INDOOR, 0.3f, 0.85f, 25f, 3, imageUrls = tableImages),
+//            FloorItem.Table("T0013", "T13", ZoneType.INDOOR, 0.5f, 0.85f, 25f, 3, imageUrls = tableImages),
+//            FloorItem.Table("T0014", "T14", ZoneType.INDOOR, 0.65f, 0.2f, 25f, 6, imageUrls = tableImages),
+//
 //
 //
 //            // ------------------- OUTDOOR TABLES -------------------
-//            FloorItem.Table("T0015", "T15", ZoneType.OUTDOOR, 0.5f, 0.1f, 30f, 2),
-//            FloorItem.Table("T0016", "T16", ZoneType.OUTDOOR, 0.75f, 0.1f, 30f, 2),
-//            FloorItem.Table("T0017", "T17", ZoneType.OUTDOOR, 0.5f, 0.25f, 30f, 4),
-//            FloorItem.Table("T0018", "T18", ZoneType.OUTDOOR, 0.75f, 0.25f, 30f, 4),
-//            FloorItem.Table("T0019", "T19", ZoneType.OUTDOOR, 0.5f, 0.4f, 30f, 6),
-//            FloorItem.Table("T0020", "T20", ZoneType.OUTDOOR, 0.75f, 0.4f, 30f, 6),
-//            FloorItem.Table("T0021", "T21", ZoneType.OUTDOOR, 0.5f, 0.6f, 25f, 2),
-//            FloorItem.Table("T0022", "T22", ZoneType.OUTDOOR, 0.75f, 0.6f, 25f, 2),
-//            FloorItem.Table("T0023", "T23", ZoneType.OUTDOOR, 0.5f, 0.75f, 25f, 4),
-//            FloorItem.Table("T0024", "T24", ZoneType.OUTDOOR, 0.75f, 0.75f, 25f, 4),
-//            FloorItem.Table("T0025", "T25", ZoneType.OUTDOOR, 0.5f, 0.9f, 25f, 6),
-//            FloorItem.Table("T0026", "T26", ZoneType.OUTDOOR, 0.75f, 0.9f, 25f, 6),
+//            FloorItem.Table("T0015", "T15", ZoneType.OUTDOOR, 0.5f, 0.1f, 30f, 2, imageUrls = outdoorImages),
+//            FloorItem.Table("T0016", "T16", ZoneType.OUTDOOR, 0.75f, 0.1f, 30f, 2, imageUrls = outdoorImages),
+//            FloorItem.Table("T0017", "T17", ZoneType.OUTDOOR, 0.5f, 0.25f, 30f, 4, imageUrls = outdoorImages),
+//            FloorItem.Table("T0018", "T18", ZoneType.OUTDOOR, 0.75f, 0.25f, 30f, 4, imageUrls = outdoorImages),
+//            FloorItem.Table("T0019", "T19", ZoneType.OUTDOOR, 0.5f, 0.4f, 30f, 6, imageUrls = outdoorImages),
+//            FloorItem.Table("T0020", "T20", ZoneType.OUTDOOR, 0.75f, 0.4f, 30f, 6, imageUrls = outdoorImages),
+//            FloorItem.Table("T0021", "T21", ZoneType.OUTDOOR, 0.5f, 0.6f, 25f, 2, imageUrls = outdoorImages),
+//            FloorItem.Table("T0022", "T22", ZoneType.OUTDOOR, 0.75f, 0.6f, 25f, 2, imageUrls = outdoorImages),
+//            FloorItem.Table("T0023", "T23", ZoneType.OUTDOOR, 0.5f, 0.75f, 25f, 4, imageUrls = outdoorImages),
+//            FloorItem.Table("T0024", "T24", ZoneType.OUTDOOR, 0.75f, 0.75f, 25f, 4, imageUrls = outdoorImages),
+//            FloorItem.Table("T0025", "T25", ZoneType.OUTDOOR, 0.5f, 0.9f, 25f, 6, imageUrls = outdoorImages),
+//            FloorItem.Table("T0026", "T26", ZoneType.OUTDOOR, 0.75f, 0.9f, 25f, 6, imageUrls = outdoorImages),
+//
+//
+//
+//
 //            FloorItem.Region("RG0001", "Serving", ZoneType.INDOOR, 0.45f, 0.3f, 0.15f, 0.4f, color = 0xFFD3D3D3),
 //            FloorItem.Region("RG0002", "Kitchen", ZoneType.INDOOR, 0.65f, 0.3f, 0.3f, 0.5f, color = 0xFF555555),
 //            FloorItem.Region("RG0003", "Cooler", ZoneType.INDOOR, 0.85f, 0.05f, 0.1f, 0.15f, color = 0xFF00BCD4),

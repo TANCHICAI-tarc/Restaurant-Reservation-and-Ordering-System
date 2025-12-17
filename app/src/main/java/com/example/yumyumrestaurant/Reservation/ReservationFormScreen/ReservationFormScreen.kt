@@ -9,6 +9,7 @@ import androidx.annotation.RequiresApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -106,21 +107,9 @@ fun ReservationFormScreenBody( viewModel: ReservationViewModel,onNextScreen: () 
         viewModel.calculateEndDate(selectedLocalDate, selectedStartTime, uiState.selectedDurationMinutes)
     }
 
-    val shouldShowPlaceholder = remember(calculatedEndDate, selectedLocalDate, selectedStartTime) {
-        selectedLocalDate == null || selectedStartTime == null || calculatedEndDate == null
-    }
 
-    val calculatedEndDateText = if (shouldShowPlaceholder) {
-        DATE_PLACEHOLDER_TEXT
-    } else {
-        calculatedEndDate?.format(DATE_FORMATTER) ?: DATE_PLACEHOLDER_TEXT
-    }
 
-    val calculateEndTimeText = if (shouldShowPlaceholder) {
-        DATE_PLACEHOLDER_TEXT
-    } else {
-        calculateEndTime?.format(TIME_DISPLAY_FORMATTER) ?: DATE_PLACEHOLDER_TEXT
-    }
+
 
     Column(
         modifier = Modifier
@@ -128,7 +117,7 @@ fun ReservationFormScreenBody( viewModel: ReservationViewModel,onNextScreen: () 
             .fillMaxSize()
             .verticalScroll(rememberScrollState()),
     ) {
-        Text("Reserve a Table", style = MaterialTheme.typography.headlineSmall)
+        Text("Reservation Form Screen", style = MaterialTheme.typography.headlineSmall)
 
         Spacer(Modifier.height(16.dp))
 
@@ -148,30 +137,48 @@ fun ReservationFormScreenBody( viewModel: ReservationViewModel,onNextScreen: () 
 
         Spacer(Modifier.height(16.dp))
 
-        Box(
-            modifier = Modifier.fillMaxWidth(),
-            contentAlignment = Alignment.Center
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            shape = RoundedCornerShape(8.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFF0F0F0)) // light gray background
         ) {
-            Row {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Start Time Column
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Start Date", fontSize = 20.sp)
-                    OutlinedButton(onClick = { viewModel.setShowDatePicker(true) }) {
-                        Text(selectedStartDateText, fontSize = 15.sp)
-                    }
+                    Text("Start Time", fontSize = 16.sp)
+                    Text(
+                        text = selectedStartTime.format(TIME_DISPLAY_FORMATTER),
+                        fontSize = 14.sp,
+                        color = Color.Black,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
                 }
 
+                // Spacer
                 Spacer(modifier = Modifier.width(16.dp))
 
+                // End Time Column
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("End Date", fontSize = 20.sp)
-                    OutlinedButton(onClick = { }) {
-                        Text(calculatedEndDateText, fontSize = 15.sp)
-                    }
+                    Text("End Time", fontSize = 16.sp)
+                    Text(
+                        text = calculateEndTime.format(TIME_DISPLAY_FORMATTER),
+                        fontSize = 14.sp,
+                        color = Color.Black,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
                 }
             }
         }
 
-        Spacer(Modifier.height(16.dp))
 
         Row {
             Text(text = "Reservation Time:", fontSize = 16.sp)
@@ -186,31 +193,6 @@ fun ReservationFormScreenBody( viewModel: ReservationViewModel,onNextScreen: () 
             enabled = false,
         )
 
-        Box(
-            modifier = Modifier.fillMaxWidth(),
-            contentAlignment = Alignment.Center
-        ) {
-            Row {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Start Time", fontSize = 20.sp)
-                    OutlinedButton(onClick = { viewModel.setShowStartTimePicker(true) }) {
-                        Text(
-                            selectedStartTime?.format(TIME_DISPLAY_FORMATTER) ?: DATE_PLACEHOLDER_TEXT,
-                            fontSize = 15.sp
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.width(16.dp))
-
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("End Time", fontSize = 20.sp)
-                    OutlinedButton(onClick = { }) {
-                        Text(calculateEndTimeText, fontSize = 15.sp)
-                    }
-                }
-            }
-        }
 
         Spacer(Modifier.height(8.dp))
 
@@ -232,10 +214,13 @@ fun ReservationFormScreenBody( viewModel: ReservationViewModel,onNextScreen: () 
 
         }
 
+
+
+
         Spacer(modifier = Modifier.height(8.dp))
 
 
-        Spacer(Modifier.height(16.dp))
+
 
         Row {
             Text(text = "Seating Area:", fontSize = 16.sp)
@@ -370,9 +355,8 @@ fun ReservationFormScreenBody( viewModel: ReservationViewModel,onNextScreen: () 
             context,
             { _, selectedHour, selectedMinute ->
                 val selectedTime = LocalTime.of(selectedHour, selectedMinute)
-                if(viewModel.validateStartTimeSelection(selectedTime)){
-                    viewModel.setSelectedStartTime(selectedTime)
-                }
+                viewModel.setSelectedStartTime(selectedTime)
+
 
                 viewModel.setShowStartTimePicker(false)
             },

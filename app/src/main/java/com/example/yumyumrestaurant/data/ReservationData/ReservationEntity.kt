@@ -1,5 +1,7 @@
 package com.example.yumyumrestaurant.data.ReservationData
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import androidx.room.TypeConverters
@@ -8,20 +10,20 @@ import com.example.yumyumrestaurant.data.CustomerEntity
 import java.time.LocalDate
 import java.time.LocalTime
 
-
+@RequiresApi(Build.VERSION_CODES.O)
 @Entity(tableName = "Reservations")
 @TypeConverters(Converters::class)
 data class ReservationEntity(
-    @PrimaryKey val reservationId: String = "",
+    @PrimaryKey
+    var reservationId: String = "",
+    var date: String = "",
+    var startTime: String = "",
+    var durationMinutes: Int = 15,
+    var endTime: String = "",
 
-    val date: LocalDate = LocalDate.now(),
-    val startTime: LocalTime = LocalTime.now().plusHours(2),
-    val durationMinutes: Int = 15,
-    val endTime: LocalTime = LocalTime.now().plusHours(durationMinutes.toLong()),
-
-    val guestCount: Int = 2,
-    val zone: String = "INDOOR",
-    val specialRequests: String = "",
-    val reservationStatus: String = "PENDING",
-    val customerId: String
+    var guestCount: Int = 2,
+    var zone: String = "INDOOR",
+    var specialRequests: String = "",
+    var reservationStatus: String = "PENDING",
+    var customerId: String = ""
 )

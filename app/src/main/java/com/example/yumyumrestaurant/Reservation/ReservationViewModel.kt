@@ -3,15 +3,19 @@ package com.example.yumyumrestaurant.Reservation
 
 import android.app.Application
 import android.os.Build
+import android.util.Log
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.*
 import com.example.stayeasehotel.data.regiondata.RegionDatabase
 import com.example.yumyumrestaurant.data.CustomerEntity
 import com.example.yumyumrestaurant.data.RegionData.RegionRepository
- import com.example.yumyumrestaurant.data.ReservationData.ReservationRepository
+import com.example.yumyumrestaurant.data.ReservationData.ReservationEntity
+import com.example.yumyumrestaurant.data.ReservationData.ReservationRepository
 import com.example.yumyumrestaurant.data.Reservation_TableDatabase
+import com.example.yumyumrestaurant.data.TableData.TableEntity
 import com.example.yumyumrestaurant.data.TableData.TableRepository
- import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -59,7 +63,11 @@ class ReservationViewModel(application: Application) : AndroidViewModel(applicat
         email = "tan@example.com"
     )
 
-
+    private val openingTime = LocalTime.of(9, 0)
+    private val closingTime = LocalTime.of(22, 0)
+    private val minDuration = 15
+    private val maxDuration = 300
+    private val minAdvanceMinutes = 120L
 
     private val reservationRepository : ReservationRepository
 
@@ -115,12 +123,9 @@ class ReservationViewModel(application: Application) : AndroidViewModel(applicat
 
 
     @RequiresApi(Build.VERSION_CODES.O)
-    fun calculateEndTime(startTime: LocalTime?, durationMinutes: Int): LocalTime? {
+    fun calculateEndTime(startTime: LocalTime , durationMinutes: Int): LocalTime  {
 
 
-        if (startTime == null || durationMinutes <= 0) {
-            return null
-        }
 
 
         val duration = durationMinutes.toLong()
@@ -163,37 +168,61 @@ class ReservationViewModel(application: Application) : AndroidViewModel(applicat
 //        return "Fee Alert: Your ${durationHours}h ${durationMins}m reservation exceeds the 2-hour standard. A fee of $$totalFee will be charged for the ${state.overtimeMinutes} minutes of overtime (calculated at $$feePerHalfHour per 30 min block)."
 //    }
 
-//    fun getAvailableTimeSlots(
-//        tableId: String,
-//        openingTime: LocalTime = LocalTime.of(10, 0),
-//        closingTime: LocalTime = LocalTime.of(22, 0),
-//        slotDurationMinutes: Long = 30
-//    ): List<LocalTime> {
-//
-//        val confirmedReservations = reservationRepository
-//            .getReservationsForTable(tableId)
-//            .filter { it.reservationStatus == "CONFIRMED" }
-//
-//        val slots = mutableListOf<LocalTime>()
-//        var currentTime = openingTime
-//
-//        while (currentTime.isBefore(closingTime)) {
-//            val isTaken = confirmedReservations.any { res ->
-//                val resStart = res.startTime
-//                val resEnd = res.startTime.plusMinutes(res.durationMinutes.toLong())
-//                currentTime in resStart until resEnd
-//            }
-//
-//            if (!isTaken) {
-//                slots.add(currentTime)
-//            }
-//
-//            currentTime = currentTime.plusMinutes(slotDurationMinutes)
-//        }
-//
-//        return slots
-//    }
+    suspend fun getAvailableTimeSlots(
+        date: LocalDate,
+        tableId: String,
+        requiredDurationMinutes: Int
+    ): List<LocalTime> {
 
+        val confirmedReservations = reservationRepository
+            .getConfirmedReservationsForTableOnDate(tableId, date)
+
+        val availableSlots = mutableListOf<LocalTime>()
+        var currentTime = openingTime
+
+        val minAdvanceDateTime = if (date == LocalDate.now()) {
+            LocalDateTime.now().plusMinutes(minAdvanceMinutes)
+        } else {
+            date.atTime(LocalTime.MIN)
+        }
+        Log.d("TimeSlotDebug", "CurrentTime: $currentTime, minAdvanceDateTime: $minAdvanceDateTime")
+
+        while (currentTime.isBefore(closingTime)) {
+
+            val slotStartDateTime = date.atTime(currentTime)
+            val slotEndDateTime = slotStartDateTime.plusMinutes(requiredDurationMinutes.toLong())
+
+            if (slotStartDateTime.isBefore(minAdvanceDateTime)) {
+                currentTime = currentTime.plusMinutes(15)
+                continue
+            }
+
+            if (slotEndDateTime.toLocalTime().isAfter(closingTime)) {
+                break
+            }
+
+            val isTaken = confirmedReservations.any { res ->
+                val formatter = DateTimeFormatter.ofPattern("HH:mm") // or "hh:mm a" depending on source
+                val resStartTime = LocalTime.parse(res.startTime, formatter)
+
+
+                val resStartDateTime = date.atTime(resStartTime)
+                val resEndDateTime = resStartDateTime.plusMinutes(res.durationMinutes.toLong())
+
+                val overlap = slotStartDateTime.isBefore(resEndDateTime) && resStartDateTime.isBefore(slotEndDateTime)
+
+                overlap
+            }
+
+            if (!isTaken) {
+                availableSlots.add(currentTime)
+            }
+
+            currentTime = currentTime.plusMinutes(15)
+        }
+
+        return availableSlots
+    }
 
     fun localDateToMillis(date: LocalDate): Long {
         return date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
@@ -208,24 +237,6 @@ class ReservationViewModel(application: Application) : AndroidViewModel(applicat
     }
 
 
-    fun setSelectedDurationMinutes(totalMinutes: Int) {
-        val validatedMinutes = totalMinutes.coerceIn(15, 300)
-
-        _uiState.update { currentState ->
-            currentState.copy(selectedDurationMinutes = validatedMinutes)
-        }
-
-        // Optional: Emit a warning if the user input was outside the bounds
-        if (totalMinutes < 15) {
-            viewModelScope.launch {
-                _validationEvents.emit("Duration cannot be less than 15 minutes.")
-            }
-        } else if (totalMinutes > MAX_RESERVATION_MINUTES) {
-            viewModelScope.launch {
-                _validationEvents.emit("Duration cannot exceed 5 hours.")
-            }
-        }
-    }
     fun setShowStartTimePicker(showStartTimePicker: Boolean) {
         _uiState.update { it.copy(showStartTimePicker = showStartTimePicker) }
     }
@@ -238,25 +249,6 @@ class ReservationViewModel(application: Application) : AndroidViewModel(applicat
 
 
 
-    fun setSelectedStartTime(selectedStartTime: LocalTime) {
-        viewModelScope.launch {
-
-            val openingTime = LocalTime.of(10, 0)
-            val closingTime = LocalTime.of(22, 0)
-            val latestState = _uiState.value // ← read fresh state inside coroutine
-
-//        if selectedStartTime in openingTime..closingTime{
-//
-//        }
-            if ( selectedStartTime <= latestState.selectedEndTime) {
-                _uiState.value = latestState.copy(
-                    selectedStartTime = selectedStartTime
-                )
-            } else {
-                _validationEvents.emit("Start time cannot be later than end time.")
-            }
-        }
-    }
 
     fun validateStartTimeSelection(selectedTime: LocalTime): Boolean {
 
@@ -286,9 +278,6 @@ class ReservationViewModel(application: Application) : AndroidViewModel(applicat
     }
 
 
-    fun setSelectedDate(selectedDate: LocalDate) {
-        _uiState.update { it.copy(selectedDate = selectedDate) }
-    }
 
 
 
@@ -318,4 +307,151 @@ class ReservationViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
+
+
+
+
+
+    private suspend fun validateReservation(
+        date: LocalDate,
+        time: LocalTime,
+        durationMinutes: Int
+    ): Boolean {
+
+
+        val startDateTime = LocalDateTime.of(date, time)
+        val endDateTime = startDateTime.plusMinutes(durationMinutes.toLong())
+        val openingDateTime = date.atTime(openingTime)
+        val closingDateTime = date.atTime(closingTime)
+
+
+
+        if (startDateTime.isBefore(openingDateTime) || endDateTime.isAfter(closingDateTime)) {
+            _validationEvents.emit("Please select a time between ${openingTime.format(TIME_DISPLAY_FORMATTER)} and ${closingTime.format(TIME_DISPLAY_FORMATTER)}")
+            return false
+        }
+
+        if (date.isBefore(LocalDate.now()) || (date == LocalDate.now() && time.isBefore(LocalTime.now()))) {
+            _validationEvents.emit("Reservations must be in the future.")
+            return false
+        }
+
+
+        if (date == LocalDate.now()) {
+            val minAdvanceTime = LocalDateTime.now().plusMinutes(minAdvanceMinutes)
+            if (startDateTime.isBefore(minAdvanceTime)) {
+                _validationEvents.emit("Reservations must be made at least 2 hours in advance.")
+                return false
+            }
+        }
+
+        return true
+    }
+
+    private fun updateReservation(
+        date: LocalDate? = _uiState.value.selectedDate,
+        time: LocalTime? = _uiState.value.selectedStartTime,
+        duration: Int = _uiState.value.selectedDurationMinutes
+    ) {
+        viewModelScope.launch {
+            if (date == null || time == null) return@launch
+
+
+            if (!validateReservation(date, time, duration)) return@launch
+
+
+
+
+            _uiState.update {
+                it.copy(
+                    selectedDate = date,
+                    selectedStartTime = time,
+                    selectedDurationMinutes = duration
+                )
+            }
+        }
+    }
+
+    fun setSelectedDate(date: LocalDate) {
+
+        if(date==LocalDate.now()){
+            val currentTime = _uiState.value.selectedStartTime ?: openingTime
+            val duration = _uiState.value.selectedDurationMinutes
+            updateReservation(date = date, time = currentTime, duration = duration)
+        }else{
+            _uiState.update { it.copy(selectedDate = date) }
+
+        }
+
+    }
+
+
+    fun setSelectedStartTime(time: LocalTime) {
+        val date = _uiState.value.selectedDate ?: LocalDate.now()
+        val duration = _uiState.value.selectedDurationMinutes
+        updateReservation(date = date, time = time, duration = duration)
+    }
+
+
+    fun setSelectedDurationMinutes(minutes: Int) {
+        val validatedMinutes = minutes.coerceIn(minDuration, maxDuration)
+        val date = _uiState.value.selectedDate ?: LocalDate.now()
+        val time = _uiState.value.selectedStartTime ?: openingTime
+
+        if (minutes < minDuration) {
+            viewModelScope.launch { _validationEvents.emit("Duration cannot be less than $minDuration minutes.") }
+        } else if (minutes > maxDuration) {
+            viewModelScope.launch { _validationEvents.emit("Duration cannot exceed $maxDuration minutes.") }
+        }
+
+        updateReservation(date = date, time = time, duration = validatedMinutes)
+    }
+
+    fun setGuestCount(count: Int) {
+        _uiState.update { it.copy(guestCount = count) }
+    }
+
+
+
+
+    fun saveReservation(onResult: (String) -> Unit) {
+        val state = _uiState.value
+
+        viewModelScope.launch {
+            val reservationId = reservationRepository.generateReservationID()
+
+            val reservation = ReservationEntity(
+                reservationId = reservationId,
+                date = state.selectedDate.toString(),
+                startTime = state.selectedStartTime.toString(),
+                durationMinutes = state.selectedDurationMinutes,
+                endTime = state.selectedEndTime.toString(),
+                guestCount = state.guestCount,
+                zone = state.selectedZone,
+                specialRequests = state.specialRequests,
+                reservationStatus = "Confirmed",
+                customerId = state.customer!!.customerId
+            )
+            reservationRepository.insertTable(reservation)
+
+            onResult(reservationId)
+        }
+    }
+
+    fun setSelectedTables(tables: List<TableEntity>) {
+        _uiState.update { currentState ->
+
+            currentState.copy(
+                selectedTables = tables,
+
+                shouldNavigateToNextStep = true
+            )
+        }
+    }
+
+    // Inside ReservationViewModel.kt
+    fun updateReservationFee(tables: Set<TableEntity>) {
+        val fee = tables.sumOf { it.seatCount * 10 }.toDouble()
+        _uiState.update { it.copy(reservationFee = fee) }
+    }
 }

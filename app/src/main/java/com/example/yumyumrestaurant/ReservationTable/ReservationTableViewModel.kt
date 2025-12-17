@@ -50,35 +50,35 @@ class ReservationTableViewModel(
     val tableUiState = tableViewModel.uiState
 
 
-    fun refreshTableStatuses(
-        date: LocalDate,
-        startTime: LocalTime,
-        durationMinutes: Int
-    ) {
-        val start = LocalDateTime.of(date, startTime)
-        val end = start.plusMinutes(durationMinutes.toLong())
-
-        val updatedTables = _uiState.value.tables.map { table ->
-            // 1. Get links for this table
-            val reservationLinksForTable = _uiState.value.reservationsTables.filter { it.tableId == table.tableId }
-
-            // 2. Get actual ReservationEntity objects
-            val reservationsForTable = reservationLinksForTable.mapNotNull { link ->
-                _uiState.value.reservations.find { it.reservationId == link.reservationId }
-            }
-
-
-            val isReserved = reservationsForTable.any { r ->
-                val rStart = LocalDateTime.of(r.date, r.startTime)
-                val rEnd = rStart.plusMinutes(r.durationMinutes.toLong())
-                start < rEnd && end > rStart
-            }
-
-            table.copy(status = if (isReserved) "RESERVED" else "AVAILABLE")
-        }
-
-        _uiState.update { it.copy(tables = updatedTables) }
-    }
+//    fun refreshTableStatuses(
+//        date: LocalDate,
+//        startTime: LocalTime,
+//        durationMinutes: Int
+//    ) {
+//        val start = LocalDateTime.of(date, startTime)
+//        val end = start.plusMinutes(durationMinutes.toLong())
+//
+//        val updatedTables = _uiState.value.tables.map { table ->
+//            // 1. Get links for this table
+//            val reservationLinksForTable = _uiState.value.reservationsTables.filter { it.tableId == table.tableId }
+//
+//            // 2. Get actual ReservationEntity objects
+//            val reservationsForTable = reservationLinksForTable.mapNotNull { link ->
+//                _uiState.value.reservations.find { it.reservationId == link.reservationId }
+//            }
+//
+//
+//            val isReserved = reservationsForTable.any { r ->
+//                val rStart = LocalDateTime.of(r.date, r.startTime)
+//                val rEnd = rStart.plusMinutes(r.durationMinutes.toLong())
+//                start < rEnd && end > rStart
+//            }
+//
+//            table.copy(status = if (isReserved) "RESERVED" else "AVAILABLE")
+//        }
+//
+//        _uiState.update { it.copy(tables = updatedTables) }
+//    }
 
 
 }

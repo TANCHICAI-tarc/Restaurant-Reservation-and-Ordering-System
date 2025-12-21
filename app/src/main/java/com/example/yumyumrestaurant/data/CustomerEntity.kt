@@ -1,10 +1,9 @@
 package com.example.yumyumrestaurant.data
 
 data class CustomerEntity(
-    val customerId: String="",
-
-    val fullName: String="",
+    val userId: String="",
+    val name: String="",
     val email: String="",
-    val phone: String=""
+    val phoneNum: String=""
 
 )

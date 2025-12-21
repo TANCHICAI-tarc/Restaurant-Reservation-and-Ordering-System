@@ -21,7 +21,8 @@ data class TableEntity(
     val radius: Float = 0f,
     val seatCount: Int = 0,
     val type: String = "",
-    var status: String = "AVAILABLE",
+    var status: TableStatus = TableStatus.AVAILABLE,
+
     var imageUrls: List<String> = emptyList(),
 
     )

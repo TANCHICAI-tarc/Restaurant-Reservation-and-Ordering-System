@@ -25,5 +25,18 @@ data class ReservationEntity(
     var zone: String = "INDOOR",
     var specialRequests: String = "",
     var reservationStatus: String = "PENDING",
-    var customerId: String = ""
+    var userId: String = ""
 )
+
+enum class ZoneTab(val title: String) {
+    INDOOR("Indoor"),
+    OUTDOOR("Outdoor")
+}
+
+enum class DateRangeFilter {
+    TODAY,
+    THIS_WEEK,
+    ALL
+}
+
+

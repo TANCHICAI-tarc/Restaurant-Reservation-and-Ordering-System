@@ -13,4 +13,13 @@ class MenuDataSource {
             .await()
             .toObjects(MenuItemUiState::class.java)
     }
+
+    suspend fun getMenuItemById(menuItemID: String): MenuItemUiState? {
+        val snapshot = db.collection("Menu")
+            .document(menuItemID)
+            .get()
+            .await()
+
+        return snapshot.toObject(MenuItemUiState::class.java)
+    }
 }

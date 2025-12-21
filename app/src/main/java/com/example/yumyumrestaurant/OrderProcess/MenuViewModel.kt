@@ -27,7 +27,7 @@ class MenuViewModel(
 
     val subCategories: StateFlow<List<String>> =
         menuUiState.map { state ->
-            state.menuItems.map { it.subCategory }.distinct()
+            state.menuItems.map { it.category }.distinct()
         }.stateIn(
             viewModelScope,
             SharingStarted.Companion.WhileSubscribed(5000),
@@ -41,12 +41,11 @@ class MenuViewModel(
             state.menuItems.filter { item ->
                 val matchesQuery =
                     item.foodName.lowercase().contains(query) ||
-                            item.category.lowercase().contains(query) ||
-                            item.subCategory.lowercase().contains(query)
+                            item.category.lowercase().contains(query)
 
                 val subCategoryMatch =
                     filter.selectedSubCategories.contains("All") ||
-                            filter.selectedSubCategories.contains(item.subCategory)
+                            filter.selectedSubCategories.contains(item.category)
 
                 val minPriceMatch = filter.minPrice == null || item.price >= filter.minPrice
                 val maxPriceMatch = filter.maxPrice == null || item.price <= filter.maxPrice
@@ -68,9 +67,9 @@ class MenuViewModel(
     val filteredSubCategories: StateFlow<List<String>> =
         combine(filterMenuItem, advancedFilter) { filteredItems, filter ->
             if (filter.selectedSubCategories.contains("All") && filter.minPrice == null && filter.maxPrice == null) {
-                filterMenuItem.value.map { it.subCategory }.distinct()
+                filterMenuItem.value.map { it.category }.distinct()
             } else {
-                filteredItems.map { it.subCategory }.distinct()
+                filteredItems.map { it.category }.distinct()
             }
         }.stateIn(
             viewModelScope,

@@ -8,4 +8,9 @@ class MenuRepository(
     suspend fun getMenuItems(): List<MenuItemUiState> {
         return menuDataSource.fetchMenuItems()
     }
+
+    suspend fun getMenuItemById(menuItemID: String): MenuItemUiState? {
+        return menuDataSource.getMenuItemById(menuItemID)
+    }
+
 }

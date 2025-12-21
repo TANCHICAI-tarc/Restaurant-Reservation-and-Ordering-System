@@ -72,6 +72,16 @@ class Converters {
     fun toUriList(data: String?): List<Uri>? {
         return data?.split(",")?.map { Uri.parse(it) }
     }
+
+    @TypeConverter
+    fun fromString(value: String?): LocalDate? {
+        return value?.let { LocalDate.parse(it) } // Expects ISO-8601 (yyyy-MM-dd)
+    }
+
+    @TypeConverter
+    fun dateToString(date: LocalDate?): String? {
+        return date?.toString() // Saves as "2025-12-20"
+    }
 }
 
 

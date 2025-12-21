@@ -1,4 +1,4 @@
-package com.example.yumyumrestaurant.data
+package com.example.yumyumrestaurant.data.ReservationTableData
 
 import androidx.room.Embedded
 import androidx.room.Entity
@@ -15,8 +15,8 @@ import com.example.yumyumrestaurant.data.TableData.TableEntity
     indices = [Index(value = ["tableId"])]
 )
 data class Reservation_Table_Entity(
-    val reservationId: String,
-    val tableId: String
+    val reservationId: String = "",
+    val tableId: String = ""
 )
 
 

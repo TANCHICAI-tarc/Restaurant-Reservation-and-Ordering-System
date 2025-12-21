@@ -4,10 +4,8 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import androidx.room.Transaction
-import androidx.room.Update
-import com.example.yumyumrestaurant.data.ReservationWithTables
-import com.example.yumyumrestaurant.data.TableData.TableEntity
+import com.example.yumyumrestaurant.data.ReservationTableData.Reservation_Table_Entity
+import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 
 
@@ -18,27 +16,28 @@ interface ReservationDao {
     @Query("SELECT * FROM Reservations")
     fun getAllReservations():kotlinx.coroutines.flow.Flow<List<ReservationEntity>>
 
-
+    @Query("UPDATE Reservations SET reservationStatus = :status WHERE reservationId = :id")
+    suspend fun updateReservationStatus(id: String, status: String)
 
     // Get table by ID
     @Query("SELECT * FROM Reservations WHERE reservationId = :reservationId LIMIT 1")
     suspend fun getReservationIdById(reservationId: String): ReservationEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertReservation(table: ReservationEntity)
+    suspend fun insertReservation(reservation: ReservationEntity)
 
     @Query("DELETE FROM Reservations")
     suspend fun clearAllReservations()
 
 
 
+
     @Query("""
-        SELECT R.*
-        FROM Reservations R
-        INNER JOIN Reservation_Table AS X ON R.reservationId = X.reservationId
-        WHERE X.tableId = :tableId 
-          AND R.date = :date 
-          AND R.reservationStatus = 'CONFIRMED'
+        SELECT Reservations.* FROM Reservations 
+    INNER JOIN Reservation_Table ON Reservations.reservationId = Reservation_Table.reservationId
+    WHERE Reservation_Table.tableId = :tableId 
+      AND Reservations.date = :date 
+      AND Reservations.reservationStatus = 'Confirmed'
     """)
-    suspend fun getConfirmedReservationsForTableOnDate(tableId: String, date: LocalDate): List<ReservationEntity>
+    suspend fun getConfirmedReservationsForTableOnDate(tableId: String, date: String): List<ReservationEntity>
 }

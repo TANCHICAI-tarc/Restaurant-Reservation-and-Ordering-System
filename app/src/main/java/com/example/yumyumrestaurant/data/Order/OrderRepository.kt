@@ -1,9 +1,12 @@
 package com.example.yumyumrestaurant.data.Order
 
+import com.example.yumyumrestaurant.OrderProcess.MenuItemUiState
 import com.example.yumyumrestaurant.OrderProcess.OrderItemUiState
+import com.example.yumyumrestaurant.data.Menu.MenuDataSource
 
 class OrderRepository(
-    private val orderDataSource: OrderDataSource
+    private val orderDataSource: OrderDataSource,
+    private val menuDataSource: MenuDataSource
 ) {
 
     suspend fun placeOrder(
@@ -41,6 +44,11 @@ class OrderRepository(
     suspend fun getMenuOrders(orderID: String): List<MenuOrder> {
         return orderDataSource.getMenuOrders(orderID)
     }
+
+    suspend fun getMenuItemById(menuItemID: String): MenuItemUiState? {
+        return menuDataSource.getMenuItemById(menuItemID)
+    }
+
 
     suspend fun getPayment(paymentID: String): Payment? {
         return orderDataSource.getPayment(paymentID)

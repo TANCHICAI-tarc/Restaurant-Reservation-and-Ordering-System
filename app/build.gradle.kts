@@ -46,19 +46,14 @@ android {
 
 dependencies {
 
+    // Firebase
     implementation(platform("com.google.firebase:firebase-bom:34.6.0"))
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-firestore")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
-    //implementation("com.google.firebase:firebase-firestore-ktx")
-    implementation("androidx.room:room-ktx:2.6.0")
-    implementation("androidx.room:room-runtime:2.6.0")
-    kapt("androidx.room:room-compiler:2.6.0")
-    implementation("io.coil-kt:coil-compose:2.6.0")
-    implementation("androidx.navigation:navigation-compose:2.8.0")
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.activity.compose)
+    implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.android.gms:play-services-auth:20.7.0")
+
+    // Jetpack Compose
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
@@ -66,19 +61,35 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation("androidx.compose.material:material-icons-extended-android:1.6.8")
 
+    implementation(libs.androidx.activity.compose)
+
+    implementation("androidx.navigation:navigation-compose:2.8.0")
+
+    // Lifecycle & ViewModel
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
+
+    // Room
+    implementation("androidx.room:room-ktx:2.6.0")
+    implementation("androidx.room:room-runtime:2.6.0")
+    kapt("androidx.room:room-compiler:2.6.0")
+
+    // Image loading
+    implementation("io.coil-kt:coil-compose:2.7.0")
+
+    // Optional/Experimental
+    implementation("androidx.annotation:annotation-experimental:1.3.1")
+
+    // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
+
+    // Debug tools
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
-
-
-
-    implementation("io.coil-kt:coil-compose:2.7.0")
-
-    implementation("androidx.annotation:annotation-experimental:1.3.1")
 
 }
 

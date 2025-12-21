@@ -1,5 +1,6 @@
 package com.example.yumyumrestaurant.data.Order
 
+import android.util.Log
 import com.example.yumyumrestaurant.OrderProcess.OrderItemUiState
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
@@ -44,7 +45,6 @@ class OrderDataSource {
     ) {
         val orderData = hashMapOf(
             "TotalAmount" to totalAmount,
-            "OrderStatus" to "Confirmed",
             "PaymentID" to paymentID,
             "ReservationID" to reservationID,
         )
@@ -85,7 +85,6 @@ class OrderDataSource {
             "PaymentMethod" to method,
             "PaymentDate" to Timestamp.now(),
             "AmountPaid" to amount,
-            "PaymentStatus" to "Completed"
         )
 
         db.collection("Payments")
@@ -95,13 +94,23 @@ class OrderDataSource {
     }
 
     suspend fun getOrders(): List<Order> {
-        return db.collection("Orders")
+        val snapshot = db.collection("Orders")
             .get()
             .await()
-            .toObjects(Order::class.java)
+        
+        return snapshot.documents.mapNotNull { doc ->
+            val order = doc.toObject(Order::class.java)
+            // Manually set orderID because it is the document ID, not a field
+            order?.apply { orderID = doc.id }
+        }
     }
 
     suspend fun getMenuOrders(orderID: String): List<MenuOrder> {
+        if (orderID.isBlank()) {
+            Log.e("OrderDataSource", "getMenuOrders called with blank orderID")
+            return emptyList()
+        }
+        
         return db.collection("Menu_Order")
             .whereEqualTo("OrderID", orderID)
             .get()
@@ -110,12 +119,23 @@ class OrderDataSource {
     }
 
     suspend fun getPayment(paymentID: String): Payment? {
-        val snapshot = db.collection("Payments")
-            .document(paymentID)
-            .get()
-            .await()
+        return try {
+            if (paymentID.isBlank()) return null
+            
+            val snapshot = db.collection("Payments")
+                .document(paymentID)
+                .get()
+                .await()
 
-        return snapshot.toObject(Payment::class.java)
+            if (snapshot.exists()) {
+                snapshot.toObject(Payment::class.java)
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            Log.e("Firestore", "Error fetching payment: ${e.message}")
+            null
+        }
     }
 
     suspend fun updateOrderStatus(orderID: String, newStatus: String) {

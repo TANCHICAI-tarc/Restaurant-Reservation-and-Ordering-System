@@ -5,135 +5,194 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavHostController
+import com.example.yumyumrestaurant.Reservation.ReservationViewModel
 
 import com.example.yumyumrestaurant.data.ReservationData.ReservationEntity
+import com.example.yumyumrestaurant.shareFilterScreen.AppliedFiltersSummary
+import com.example.yumyumrestaurant.shareFilterScreen.SharedFilterSection
+import com.example.yumyumrestaurant.shareFilterScreen.SharedFilterViewModel
+import com.example.yumyumrestaurant.ui.UserViewModel
+import java.time.format.DateTimeFormatter
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UserViewReservationScreen(
-//    navController: NavHostController
+    navController: NavHostController,
+    userViewModel: UserViewModel,
+    sharedFilterViewModel: SharedFilterViewModel = viewModel(),
+    reservationViewModel: ReservationViewModel=viewModel()
 ) {
-    val defaultReservations = listOf(
-        ReservationEntity(
-            reservationId = "R001",
-            date = "2025-12-20",
-            startTime = "18:00",
-            endTime = "18:30",
-            durationMinutes = 30,
-            guestCount = 2,
-            zone = "INDOOR",
-            reservationStatus = "CONFIRMED",
-            customerId = "user1"
-        ),
-        ReservationEntity(
-            reservationId = "R002",
-            date = "2025-12-22",
-            startTime = "19:00",
-            endTime = "19:15",
-            durationMinutes = 15,
-            guestCount = 4,
-            zone = "OUTDOOR",
-            reservationStatus = "PENDING",
-            customerId = "user1"
-        ),
-        ReservationEntity(
-            reservationId = "R003",
-            date = "2025-12-10",
-            startTime = "17:00",
-            endTime = "17:45",
-            durationMinutes = 45,
-            guestCount = 6,
-            zone = "INDOOR",
-            reservationStatus = "COMPLETED",
-            customerId = "user1"
-        )
-    )
 
-
-    var selectedTab by remember { mutableStateOf(0) }
-
-    val activeReservations = defaultReservations.filter {
-        it.reservationStatus == "Pending" || it.reservationStatus == "CONFIRMED"
+    val userData by userViewModel.userData.collectAsState()
+    val currentUserId = userData?.userId
+    val reservationUiState by reservationViewModel.uiState.collectAsState()
+    LaunchedEffect(reservationUiState.reservations) {
+        sharedFilterViewModel.setAllReservationData(reservationUiState.reservations)
     }
 
-    val historyReservations = defaultReservations.filter {
-        it.reservationStatus == "Completed" || it.reservationStatus == "Cancelled"
-    }
+    val sharedUiState by sharedFilterViewModel.uiState.collectAsState()
+    val filteredReservationData by sharedFilterViewModel.filteredReservationData.collectAsState()
 
-    val reservationsShown =
-        if (selectedTab == 0) activeReservations else historyReservations
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-            .statusBarsPadding()
-    ) {
-
-        Text(
-            text = "My Reservation",
-            style = MaterialTheme.typography.headlineSmall
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        TabRow(selectedTabIndex = selectedTab) {
-            Tab(
-                selected = selectedTab == 0,
-                onClick = { selectedTab = 0 },
-                text = {
+    Scaffold(
+        topBar = {
+            CenterAlignedTopAppBar(
+                navigationIcon = {
+                    IconButton(onClick = {
+//                        navController.popBackStack()
+                    }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                title = {
                     Text(
-                        text = "CONFIRMED",
-                        fontSize = 11.sp
+                        "My Reservation",
+                        style = MaterialTheme.typography.titleMedium
                     )
+                },
+                actions = {
+                    IconButton(onClick = { sharedFilterViewModel.toggleFilterDialog(true) }) {
+                        Icon(Icons.Default.Tune, contentDescription = "Filter")
+                    }
+                }
+            )
+        },
+
+        ) { innerPadding ->
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+
+        ) {
+            SharedFilterSection(
+                viewModel = sharedFilterViewModel,
+                title = "Filters",
+                onFilterApplied = {
+//            sharedFilterViewModel.performSearch()
                 }
             )
 
-            Tab(
-                selected = selectedTab == 1,
-                onClick = { selectedTab = 1 },
-                text = {
-                    Text(
-                        text = "COMPLETED",
-                        fontSize = 11.sp
-                    )
-                }
+
+            val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+            val timeFormatter = DateTimeFormatter.ofPattern("hh:mm a")
+            val filters = mapOf(
+
+                "Location" to sharedUiState.selectedLocations,
+
+                "Start Date" to listOf(sharedUiState.reservationDate?.format(dateFormatter) ?: "All"),
+
+                "Start Time" to listOf(sharedUiState.startTime?.format(timeFormatter) ?: "All"),
+                "End Time" to listOf(sharedUiState.endTime?.format(timeFormatter) ?: "All"),
             )
 
-            Tab(
-                selected = selectedTab == 2,
-                onClick = { selectedTab = 2 },
-                text = {
-                    Text(
-                        text = "CANCELLED",
-                        fontSize = 11.sp
-                    )
-                }
+            AppliedFiltersSummary(
+                filters = filters,
+                onRemoveFilter = { type, value ->
+                    sharedFilterViewModel.removeFilter(type, value)
+                },
+                onClearAll = { sharedFilterViewModel.showClearFiltersConfirmationDialog(true) }
             )
 
-        }
 
-        Spacer(modifier = Modifier.height(12.dp))
 
-        if (reservationsShown.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("No reservation")
+
+            var selectedTab by remember { mutableStateOf(0) }
+
+            val confirmedReservations = filteredReservationData.filter {
+                it.userId == currentUserId && it.reservationStatus == "Confirmed"
             }
-        } else {
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+
+            val completedReservations = filteredReservationData.filter {
+                it.userId == currentUserId && it.reservationStatus == "Completed"
+            }
+
+            val cancelledReservations = filteredReservationData.filter {
+                it.userId == currentUserId && it.reservationStatus == "Cancelled"
+            }
+
+
+            val reservationsShown = when (selectedTab) {
+                0 -> confirmedReservations
+                1 -> completedReservations
+                2 -> cancelledReservations
+                else -> emptyList()
+            }
+
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+
+
             ) {
-                items(reservationsShown) { reservation ->
-                    ReservationCard(reservation)
+
+
+                TabRow(
+                    selectedTabIndex = selectedTab,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Tab(
+                        selected = selectedTab == 0,
+                        onClick = { selectedTab = 0 },
+                        modifier = Modifier.weight(1f),
+                        text = { Text("CONFIRMED", fontSize = 12.sp, textAlign = TextAlign.Center) }
+                    )
+                    Tab(
+                        selected = selectedTab == 1,
+                        onClick = { selectedTab = 1 },
+                        modifier = Modifier.weight(1f),
+                        text = { Text("COMPLETED", fontSize = 12.sp, textAlign = TextAlign.Center) }
+                    )
+                    Tab(
+                        selected = selectedTab == 2,
+                        onClick = { selectedTab = 2 },
+                        modifier = Modifier.weight(1f),
+                        text = { Text("CANCELLED", fontSize = 12.sp, textAlign = TextAlign.Center) }
+                    )
+                }
+
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+
+
+                if (reservationsShown.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("No reservations")
+                    }
+                } else {
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        items(reservationsShown) { reservation ->
+                            ReservationCard(
+                                reservation = reservation,
+                                onCancelClick = { res ->
+
+                                    sharedFilterViewModel.cancelReservation(res)
+                                }
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -193,10 +252,9 @@ fun ReservationCard(
                 )
             }
 
-            // ✅ Cancel button ONLY for confirmed / pending
+
             if (
-                reservation.reservationStatus == "CONFIRMED" ||
-                reservation.reservationStatus == "PENDING"
+                reservation.reservationStatus == "Confirmed"
             ) {
                 Spacer(modifier = Modifier.height(12.dp))
 

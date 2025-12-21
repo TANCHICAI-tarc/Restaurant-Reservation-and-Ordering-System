@@ -9,7 +9,6 @@ data class MenuItemUiState(
     val description: String = "",
     val components: List<String> = emptyList(),
     val category: String = "",
-    val subCategory: String = "",
     val image: String? = null,
     val availability: Boolean = true,
     val chefRecommend: Boolean = false

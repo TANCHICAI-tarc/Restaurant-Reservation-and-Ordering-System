@@ -2,32 +2,35 @@ package com.example.yumyumrestaurant.TableSelectionScreen
 
 
 import android.app.Application
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.drawable.BitmapDrawable
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.*
+import coil.imageLoader
+import coil.request.ImageRequest
+import coil.request.SuccessResult
 import com.example.stayeasehotel.data.regiondata.RegionDatabase
 
 import com.example.yumyumrestaurant.data.RegionData.RegionEntity
 import com.example.yumyumrestaurant.data.RegionData.RegionRepository
-import com.example.yumyumrestaurant.data.Reservation_TableDatabase
+import com.example.yumyumrestaurant.data.ReservationTableData.Reservation_TableDatabase
 import com.example.yumyumrestaurant.data.TableData.TableEntity
 import com.example.yumyumrestaurant.data.TableData.TableRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.LocalDate
-import java.time.LocalTime
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.time.LocalDateTime
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileOutputStream
 import kotlin.math.pow
 import kotlin.math.sqrt
 
@@ -93,6 +96,49 @@ class TableViewModel(application: Application) : AndroidViewModel(application) {
     }
 
 
+
+    fun prepareShareFiles(context: Context, urls: List<String>) {
+        viewModelScope.launch(Dispatchers.IO) { // Use IO thread
+            // Use async to start all downloads/compressions at the same time
+            val deferredFiles = urls.map { url ->
+                async { getFileFromCoil(context, url) }
+            }
+
+            val files = deferredFiles.awaitAll().filterNotNull()
+
+            _uiState.update { it.copy(preparedFiles = files) }
+        }
+    }
+
+    fun clearPreparedFiles() {
+        _uiState.update { it.copy(preparedFiles = emptyList()) }
+    }
+    suspend fun getFileFromCoil(context: Context, url: String): File? = withContext(Dispatchers.IO) {
+        val loader = context.imageLoader
+        val request = ImageRequest.Builder(context)
+            .data(url)
+            .allowHardware(false) // Important: Non-hardware bitmaps are easier to copy
+            .build()
+
+        val result = loader.execute(request)
+        if (result is SuccessResult) {
+            val bitmap = (result.drawable as? BitmapDrawable)?.bitmap
+            if (bitmap != null) {
+                // Create a temp file in the cache directory
+                val file = File(context.cacheDir, "temp_share_${url.hashCode()}.jpg")
+                FileOutputStream(file).use { out ->
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
+                }
+                return@withContext file
+            }
+        }
+        null
+    }
+
+    fun updateTables(newTables: List<TableEntity>) {
+        Log.d("TableVM", "Tables updated! First table status: ${newTables.firstOrNull()?.status}")
+        _uiState.update { it.copy(tables = newTables) }
+    }
 
     fun onCanvasTap(
         x: Float,
@@ -216,8 +262,24 @@ class TableViewModel(application: Application) : AndroidViewModel(application) {
 
 
 
+    fun requestClearAll() {
+         if (_uiState.value.selectedTables.isNotEmpty()) {
+            _uiState.update { it.copy(showClearAllConfirmation = true) }
+        }
+    }
 
+    fun dismissClearAll() {
+        _uiState.update { it.copy(showClearAllConfirmation = false) }
+    }
 
+    fun confirmClearAll() {
+        _uiState.update {
+            it.copy(
+                selectedTables = emptySet(),
+                showClearAllConfirmation = false
+            )
+        }
+    }
 
 
 

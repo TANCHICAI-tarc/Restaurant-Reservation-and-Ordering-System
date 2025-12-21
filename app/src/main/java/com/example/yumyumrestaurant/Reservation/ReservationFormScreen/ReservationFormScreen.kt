@@ -3,28 +3,38 @@ package com.example.yumyumrestaurant.data
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.os.Build
+import android.util.Log
 import android.widget.NumberPicker
 import android.widget.Toast
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AddCircleOutline
+import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.RemoveCircleOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.example.yumyumrestaurant.Reservation.ReservationNavEvent
 import com.example.yumyumrestaurant.Reservation.ReservationViewModel
+import com.example.yumyumrestaurant.ReservationTable.ReservationTableViewModel
 import com.example.yumyumrestaurant.data.TableData.ZoneType
 import java.time.LocalDate
 import java.time.LocalTime
@@ -35,7 +45,7 @@ private val DATE_DISPLAY_FORMATTER = DateTimeFormatter.ofPattern("EEE, MMM d ,yy
 private val TIME_DISPLAY_FORMATTER = DateTimeFormatter.ofPattern("hh:mm a")
 
 private const val DATE_PLACEHOLDER_TEXT = "-"
-private const val DEFAULT_DURATION_MINUTES = 15
+private const val DEFAULT_DURATION_MINUTES = 30
 
 fun formatDuration(totalMinutes: Int): String {
 
@@ -63,49 +73,45 @@ fun formatDuration(totalMinutes: Int): String {
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun ReservationFormScreen( onNextScreen: () -> Unit,viewModel: ReservationViewModel) {
-    val uiState by viewModel.uiState.collectAsState()
+fun ReservationFormScreen( onNextScreen: () -> Unit,reservationTableviewModel: ReservationTableViewModel) {
+    val uiState by reservationTableviewModel.reservationViewModel.uiState.collectAsState()
     val context = LocalContext.current
 
 
-
-    LaunchedEffect(uiState.shouldNavigateToNextStep) {
-        if (uiState.shouldNavigateToNextStep) {
-            onNextScreen()
-            viewModel.resetNavigationFlag()
+    LaunchedEffect(Unit) {
+        reservationTableviewModel.reservationViewModel.navigationEvents.collect { event ->
+            when (event) {
+                is ReservationNavEvent.NavigateToTableSelection -> {
+                    onNextScreen()
+                }
+            }
         }
     }
 
-    LaunchedEffect(viewModel.validationEvents) {
-        viewModel.validationEvents.collect { message ->
+    LaunchedEffect(reservationTableviewModel.reservationViewModel.validationEvents) {
+        reservationTableviewModel.reservationViewModel.validationEvents.collect { message ->
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
         }
     }
 
-    ReservationFormScreenBody(viewModel, onNextScreen)
+    ReservationFormScreenBody(reservationTableviewModel, onNextScreen)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun ReservationFormScreenBody( viewModel: ReservationViewModel,onNextScreen: () -> Unit) {
+fun ReservationFormScreenBody( reservationTableviewModel: ReservationTableViewModel,onNextScreen: () -> Unit) {
     val context = LocalContext.current
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by reservationTableviewModel.reservationViewModel.uiState.collectAsState()
 
     val selectedLocalDate = uiState.selectedDate
     val selectedStartTime = uiState.selectedStartTime
 
-    val selectedStartDateText = selectedLocalDate?.format(DATE_FORMATTER) ?: DATE_PLACEHOLDER_TEXT
-
-
 
     val calculateEndTime = remember(selectedStartTime, uiState.selectedDurationMinutes) {
-        viewModel.calculateEndTime(selectedStartTime, uiState.selectedDurationMinutes)
+        reservationTableviewModel.reservationViewModel.calculateEndTime(selectedStartTime, uiState.selectedDurationMinutes)
     }
 
-    val calculatedEndDate = remember(selectedLocalDate, selectedStartTime, uiState.selectedDurationMinutes) {
-        viewModel.calculateEndDate(selectedLocalDate, selectedStartTime, uiState.selectedDurationMinutes)
-    }
 
 
 
@@ -117,121 +123,78 @@ fun ReservationFormScreenBody( viewModel: ReservationViewModel,onNextScreen: () 
             .fillMaxSize()
             .verticalScroll(rememberScrollState()),
     ) {
-        Text("Reservation Form Screen", style = MaterialTheme.typography.headlineSmall)
 
         Spacer(Modifier.height(16.dp))
 
-        Row {
-            Text(text = "Reservation Date:", fontSize = 16.sp)
-            Text(text = " *", color = Color.Red, fontSize = 16.sp)
-        }
+        LabelWithAsterisk("Reservation Date")
         OutlinedTextField(
             value = selectedLocalDate?.format(DATE_DISPLAY_FORMATTER) ?: "",
             onValueChange = {},
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { viewModel.setShowDatePicker(true) },
+                .clickable { reservationTableviewModel.reservationViewModel.setShowDatePicker(true) },
             enabled = false,
-            placeholder = { Text("Select Date") }
+            leadingIcon = { Icon(Icons.Default.CalendarMonth, null) },
+            placeholder = { Text("Select Date") },
+            shape = RoundedCornerShape(12.dp)
         )
 
         Spacer(Modifier.height(16.dp))
 
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(modifier = Modifier.weight(1f)) {
+                LabelWithAsterisk("Start Time")
+                OutlinedTextField(
+                    value = selectedStartTime.format(TIME_DISPLAY_FORMATTER),
+                    onValueChange = {},
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { reservationTableviewModel.reservationViewModel.setShowStartTimePicker(true) },
+                    enabled = false,
+                    shape = RoundedCornerShape(12.dp)
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                LabelWithAsterisk("Duration")
+                OutlinedTextField(
+                    value = formatDuration(uiState.selectedDurationMinutes),
+                    onValueChange = {},
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { reservationTableviewModel.reservationViewModel.setShowDurationPicker(true) },
+                    enabled = false,
+                    shape = RoundedCornerShape(12.dp)
+                )
+            }
 
+        }
         Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            shape = RoundedCornerShape(8.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFF0F0F0)) // light gray background
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFF7F7F7)),
+            border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.5f))
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
+                modifier = Modifier.padding(16.dp).fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Start Time Column
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Start Time", fontSize = 16.sp)
-                    Text(
-                        text = selectedStartTime.format(TIME_DISPLAY_FORMATTER),
-                        fontSize = 14.sp,
-                        color = Color.Black,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
-                }
-
-                // Spacer
-                Spacer(modifier = Modifier.width(16.dp))
-
-                // End Time Column
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("End Time", fontSize = 16.sp)
-                    Text(
-                        text = calculateEndTime.format(TIME_DISPLAY_FORMATTER),
-                        fontSize = 14.sp,
-                        color = Color.Black,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
-                }
+                TimeSummaryUnit("Start Time", selectedStartTime)
+                Icon(Icons.Default.ArrowForward, null, tint = Color.Gray, modifier = Modifier.size(16.dp))
+                TimeSummaryUnit("End Time", calculateEndTime)
             }
         }
 
-
-        Row {
-            Text(text = "Reservation Time:", fontSize = 16.sp)
-            Text(text = " *", color = Color.Red, fontSize = 16.sp)
-        }
-
-        OutlinedTextField(
-            value = selectedStartTime?.format(TIME_DISPLAY_FORMATTER) ?: "",
-            onValueChange = {},
-            modifier = Modifier.fillMaxWidth()
-                .clickable { viewModel.setShowStartTimePicker(true) },
-            enabled = false,
-        )
+        Divider(modifier = Modifier.padding(vertical = 8.dp), color = Color.LightGray.copy(alpha = 0.4f))
 
 
-        Spacer(Modifier.height(8.dp))
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Duration:")
-
-
-
-            OutlinedTextField(
-                value = formatDuration(uiState.selectedDurationMinutes) ,
-                onValueChange = {},
-                modifier = Modifier.fillMaxWidth()
-                    .clickable { viewModel.setShowDurationPicker(true) },
-                enabled = false,
-            )
-
-        }
-
-
-
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-
-
-
-        Row {
-            Text(text = "Seating Area:", fontSize = 16.sp)
-            Text(text = " *", color = Color.Red, fontSize = 16.sp)
-        }
+        LabelWithAsterisk("Seating Area")
 
         val zones = ZoneType.entries.map { it.name }
 
         ExposedDropdownMenuBox(
             expanded = uiState.zoneExpanded,
-            onExpandedChange = { viewModel.setZoneExpanded(!uiState.zoneExpanded)  }
+            onExpandedChange = { reservationTableviewModel.reservationViewModel.setZoneExpanded(!uiState.zoneExpanded)  }
         ) {
             OutlinedTextField(
                 value = uiState.selectedZone,
@@ -248,14 +211,14 @@ fun ReservationFormScreenBody( viewModel: ReservationViewModel,onNextScreen: () 
 
             ExposedDropdownMenu(
                 expanded = uiState.zoneExpanded,
-                onDismissRequest = { viewModel.setZoneExpanded(false) }
+                onDismissRequest = { reservationTableviewModel.reservationViewModel.setZoneExpanded(false) }
             ) {
                 zones.forEach { zone->
                     DropdownMenuItem(
                         text = { Text(zone)},
                         onClick = {
-                            viewModel.setSelectedZone(zone)
-                            viewModel.setZoneExpanded(false)
+                            reservationTableviewModel.reservationViewModel.setSelectedZone(zone)
+                            reservationTableviewModel.reservationViewModel.setZoneExpanded(false)
                         }
                     )
                 }
@@ -265,34 +228,19 @@ fun ReservationFormScreenBody( viewModel: ReservationViewModel,onNextScreen: () 
         Spacer(Modifier.height(16.dp))
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Guests: ${uiState.guestCount}", modifier = Modifier.weight(1f))
-
-            IconButton(onClick = { viewModel.decrementGuestCount() }) {
-                Icon(Icons.Default.Remove, contentDescription = "Decrease")
-            }
-
-            Text(
-                text = uiState.guestCount.toString(),
-                fontSize = 20.sp,
-                modifier = Modifier.width(40.dp),
-                textAlign = TextAlign.Center
-            )
-
-            IconButton(onClick = { viewModel.incrementGuestCount() }) {
-                Icon(Icons.Default.Add, contentDescription = "Increase")
-            }
+            Text("Number of Guests", fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            GuestCounter(uiState.guestCount, reservationTableviewModel.reservationViewModel)
         }
 
         Spacer(Modifier.height(24.dp))
 
-        Text("Special Requests:(Optional)", style = MaterialTheme.typography.titleMedium)
-
+        Text("Special Requests (Optional)", fontWeight = FontWeight.Bold)
         OutlinedTextField(
             value = uiState.specialRequests,
-            onValueChange = { viewModel.setSpecialRequests(it) },
+            onValueChange = { reservationTableviewModel.reservationViewModel.setSpecialRequests(it) },
             modifier = Modifier.fillMaxWidth(),
             placeholder = { Text("Example: Need a high chair.") },
-            label = { Text("Special Request") },
+            label = { Text("Special Request?") },
             singleLine = false,
             maxLines = 5,
         )
@@ -300,10 +248,17 @@ fun ReservationFormScreenBody( viewModel: ReservationViewModel,onNextScreen: () 
         Spacer(Modifier.height(24.dp))
 
         Button(
-            onClick = { viewModel.searchTable() },
+            onClick = {
+
+                reservationTableviewModel.refreshTableStatuses(
+                    uiState.selectedDate,
+                    uiState.selectedStartTime,
+                    uiState.selectedDurationMinutes
+                )
+                reservationTableviewModel.reservationViewModel.searchTable() },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Search Now")
+            Text("Search Available Table")
         }
     }
 
@@ -311,9 +266,9 @@ fun ReservationFormScreenBody( viewModel: ReservationViewModel,onNextScreen: () 
     if (uiState.showDurationPicker) {
         DurationPickerDialog(
             initialMinutes = uiState.selectedDurationMinutes,
-            onDismiss = { viewModel.setShowDurationPicker(false) },
+            onDismiss = { reservationTableviewModel.reservationViewModel.setShowDurationPicker(false) },
             onConfirm = { totalMinutes ->
-                viewModel.setSelectedDurationMinutes(totalMinutes)
+                reservationTableviewModel.reservationViewModel.setSelectedDurationMinutes(totalMinutes)
             }
         )
     }
@@ -321,54 +276,51 @@ fun ReservationFormScreenBody( viewModel: ReservationViewModel,onNextScreen: () 
     if (uiState.showDatePicker) {
         val initialDate = uiState.selectedDate ?: LocalDate.now()
 
-        val initialYear = initialDate.year
-        val initialMonth = initialDate.monthValue - 1
-        val initialDay = initialDate.dayOfMonth
-
         val picker = DatePickerDialog(
             context,
             { _, year, month, day ->
-                viewModel.setSelectedDate(LocalDate.of(year, month + 1, day))
-                viewModel.setShowDatePicker(false)
+                reservationTableviewModel.reservationViewModel.setSelectedDate(LocalDate.of(year, month + 1, day))
+                reservationTableviewModel.reservationViewModel.setShowDatePicker(false)
             },
-            initialYear,
-            initialMonth,
-            initialDay
+            initialDate.year,
+            initialDate.monthValue - 1,
+            initialDate.dayOfMonth
         )
 
-        val todayInMillis = viewModel.localDateToMillis(LocalDate.now())
-        picker.datePicker.minDate = todayInMillis
+         picker.datePicker.minDate = reservationTableviewModel.reservationViewModel.localDateToMillis(initialDate)
 
-        picker.setOnCancelListener { viewModel.setShowDatePicker(false) }
-        picker.setOnDismissListener { viewModel.setShowDatePicker(false) }
-
+        picker.setOnDismissListener { reservationTableviewModel.reservationViewModel.setShowDatePicker(false) }
         picker.show()
     }
-
     if (uiState.showStartTimePicker) {
         val initialLocalTime = uiState.selectedStartTime ?: LocalTime.now()
 
         val initialHour = initialLocalTime.hour
         val initialMinute = initialLocalTime.minute
 
+
+
         TimePickerDialog(
             context,
             { _, selectedHour, selectedMinute ->
                 val selectedTime = LocalTime.of(selectedHour, selectedMinute)
-                viewModel.setSelectedStartTime(selectedTime)
+
+                reservationTableviewModel.reservationViewModel.setSelectedStartTime(selectedTime)
 
 
-                viewModel.setShowStartTimePicker(false)
+                reservationTableviewModel.reservationViewModel.setShowStartTimePicker(false)
             },
             initialHour,
             initialMinute,
             false
         ).apply {
-            setOnCancelListener { viewModel.setShowStartTimePicker(false) }
+            setOnCancelListener { reservationTableviewModel.reservationViewModel.setShowStartTimePicker(false) }
             show()
         }
     }
 }
+
+
 
 @Composable
 fun DurationPickerDialog(
@@ -376,100 +328,161 @@ fun DurationPickerDialog(
     onDismiss: () -> Unit,
     onConfirm: (Int) -> Unit
 ) {
-    val initialHour = initialMinutes / 60
-    val initialMinute = initialMinutes % 60
+    var hour by remember { mutableIntStateOf(initialMinutes / 60) }
+    var minute by remember { mutableIntStateOf(initialMinutes % 60) }
 
-    var hour by remember { mutableStateOf(initialHour) }
-    var minute by remember { mutableStateOf(initialMinute) }
+
+    val availableIntervals = remember(hour) {
+        when (hour) {
+            0 -> listOf(15, 30, 45)
+            5 -> listOf(0)
+            else -> listOf(0, 15, 30, 45)
+        }
+    }
+
+
+    LaunchedEffect(availableIntervals) {
+        if (!availableIntervals.contains(minute)) {
+            minute = availableIntervals.first()
+        }
+    }
 
     AlertDialog(
-        onDismissRequest = { onDismiss() },
-        title = { Text("Select Duration") },
+        onDismissRequest = onDismiss,
+        title = { Text("Select Duration", fontWeight = FontWeight.Bold) },
         text = {
             Row(
                 horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
             ) {
 
-                // Hour Column
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("hr")
-                    Spacer(Modifier.height(8.dp))
+                    Text("hr", style = MaterialTheme.typography.labelMedium)
                     DurationNumberPicker(
                         value = hour,
                         range = 0..5,
-                        onValueChange = { hour = it
-                            minute = when {
-                                hour == 0 && minute < 15 -> 15
-                                hour == 5 -> 0
-                                else -> minute
-                            }
-                        }
+                        onValueChange = { hour = it }
                     )
                 }
-
-                val minuteRange = when (hour) {
-                    0 -> 15..59
-                    5 -> 0..0        // Only 0 mins allowed at max hour
-                    else -> 0..59    // Normal range
-                }
-
 
                 Spacer(modifier = Modifier.width(32.dp))
 
                 // Minute Column
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("min")
-                    Spacer(Modifier.height(8.dp))
+                    Text("min", style = MaterialTheme.typography.labelMedium)
                     DurationNumberPicker(
                         value = minute,
-                        range = minuteRange,
+                        displayedValues = availableIntervals,
                         onValueChange = { minute = it }
                     )
                 }
             }
-
         },
         confirmButton = {
             TextButton(onClick = {
-                val totalMinutes = hour * 60 + minute
-
-                if (totalMinutes in 15..300) {
-                    onConfirm(totalMinutes)
-                }
+                onConfirm((hour * 60) + minute)
                 onDismiss()
-            }) {
-                Text("OK")
-            }
+            }) { Text("OK") }
         },
         dismissButton = {
-            TextButton(onClick = { onDismiss() }) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
+}
+
+
+
+@Composable
+fun DurationNumberPicker(
+    value: Int,
+    range: IntRange = 0..0,
+    displayedValues: List<Int>? = null,
+    onValueChange: (Int) -> Unit
+) {
+    AndroidView(
+        modifier = Modifier.width(70.dp),
+        factory = { context ->
+            NumberPicker(context).apply {
+                if (displayedValues != null) {
+                    val stringValues = displayedValues.map { String.format("%02d", it) }.toTypedArray()
+                    minValue = 0
+                    maxValue = stringValues.size - 1
+                    this.displayedValues = stringValues
+                    this.value = displayedValues.indexOf(value).coerceAtLeast(0)
+                } else {
+                    minValue = range.first
+                    maxValue = range.last
+                    this.value = value
+                }
+
+                // Initial Listener
+                setOnValueChangedListener { _, _, newVal ->
+                    if (displayedValues != null) {
+                        // CRITICAL: Check if index is valid before accessing list
+                        if (newVal >= 0 && newVal < displayedValues.size) {
+                            onValueChange(displayedValues[newVal])
+                        }
+                    } else {
+                        onValueChange(newVal)
+                    }
+                }
+            }
+        },
+        update = { picker ->
+            if (displayedValues != null) {
+                val stringValues = displayedValues.map { String.format("%02d", it) }.toTypedArray()
+                val targetIndex = displayedValues.indexOf(value).coerceAtLeast(0)
+
+                // 1. Temporarily remove listener to prevent recursive calls/crashes during update
+                picker.setOnValueChangedListener(null)
+
+                // 2. Perform the reset sequence
+                picker.displayedValues = null
+                picker.minValue = 0
+                picker.maxValue = (stringValues.size - 1).coerceAtLeast(0)
+                picker.displayedValues = stringValues
+                picker.value = targetIndex
+
+                // 3. Re-attach the listener with the new data reference
+                picker.setOnValueChangedListener { _, _, newVal ->
+                    if (newVal >= 0 && newVal < displayedValues.size) {
+                        onValueChange(displayedValues[newVal])
+                    }
+                }
+            } else {
+                if (picker.value != value) {
+                    picker.value = value
+                }
+            }
         }
     )
 }
 
 @Composable
-fun DurationNumberPicker(
-    value: Int,
-    range: IntRange,
-    onValueChange: (Int) -> Unit
-) {
-    AndroidView(
-        factory = { context ->
-            NumberPicker(context).apply {
-                minValue = range.first
-                maxValue = range.last
-                setOnValueChangedListener { _, _, newVal ->
-                    onValueChange(newVal)
-                }
-            }
-        },
-        update = {
-            it.minValue = range.first
-            it.maxValue = range.last
-            if (it.value != value) it.value = value
-        }
-    )
+fun LabelWithAsterisk(label: String) {
+    Row(modifier = Modifier.padding(bottom = 4.dp)) {
+        Text(text = label, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        Text(text = " *", color = Color.Red, fontSize = 14.sp)
+    }
 }
 
+@Composable
+fun TimeSummaryUnit(label: String, time: java.time.LocalTime) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(label, fontSize = 12.sp, color = Color.Gray)
+        Text(time.format(java.time.format.DateTimeFormatter.ofPattern("hh:mm a")), fontWeight = FontWeight.Bold)
+    }
+}
 
+@Composable
+fun GuestCounter(count: Int, viewModel: ReservationViewModel) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = { viewModel.decrementGuestCount() },enabled = count > 1) {
+            Icon(Icons.Default.RemoveCircleOutline, null)
+        }
+        Text(count.toString(), fontSize = 18.sp, modifier = Modifier.padding(horizontal = 8.dp))
+        IconButton(onClick = { viewModel.incrementGuestCount() }) {
+            Icon(Icons.Default.AddCircleOutline, null)
+        }
+    }
+}

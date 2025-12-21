@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterListOff
 import androidx.compose.material.icons.filled.ShoppingBasket
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -43,6 +44,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -72,8 +74,11 @@ import com.example.yumyumrestaurant.R
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MenuScreen(
+    modifier: Modifier = Modifier,
     menuViewModel: MenuViewModel,
     orderViewModel: OrderViewModel,
+    allowOrdering: Boolean,
+    onRequireReservation: () -> Unit,
     onNavigateToMenuDetails: (MenuItemUiState) -> Unit,
     onNavigateToCart: () -> Unit
 ) {
@@ -84,14 +89,14 @@ fun MenuScreen(
     val keyboardController = LocalSoftwareKeyboardController.current
 
     var tempAdvancedFilter by remember { mutableStateOf(menuViewModel.advancedFilter.value) }
-
+    var showReserveDialog by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     var showAdvancedFilterDialog by remember { mutableStateOf(false) }
     val isAdvancedMode by menuViewModel.isAdvancedMode.collectAsState()
     val advancedFilterState = menuViewModel.advancedFilter.collectAsState().value
 
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .background(Color(0xFFF3F3F3))
     ) {
@@ -194,7 +199,7 @@ fun MenuScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            val groupedItems = filterMenu.value.groupBy { it.subCategory }
+            val groupedItems = filterMenu.value.groupBy { it.category }
             val cartItems = orderViewModel.orderUiState.collectAsState().value.selectedItems
 
             // Menu list
@@ -224,7 +229,13 @@ fun MenuScreen(
                         MenuItemCard(
                             item = item,
                             cartQuantity = cartQuantity,
-                            onClick = { onNavigateToMenuDetails(item) }
+                            onClick = {
+                                if (allowOrdering) {
+                                    onNavigateToMenuDetails(item)
+                                } else {
+                                    showReserveDialog = true
+                                }
+                            }
                         )
                     }
 
@@ -240,7 +251,13 @@ fun MenuScreen(
                 .padding(16.dp)
         ) {
             FloatingActionButton(
-                onClick = { onNavigateToCart() },
+                onClick = {
+                    if (allowOrdering) {
+                        onNavigateToCart()
+                    } else {
+                        showReserveDialog = true
+                    }
+                },
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier
                     .size(110.dp)
@@ -284,6 +301,33 @@ fun MenuScreen(
                 },
                 onClose = {
                     showAdvancedFilterDialog = false
+                }
+            )
+        }
+
+        if (showReserveDialog) {
+            AlertDialog(
+                onDismissRequest = { showReserveDialog = false },
+                title = { Text("Reserve a Table First") },
+                text = {
+                    Text("Please reserve a table before placing any food orders.")
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showReserveDialog = false
+                            onRequireReservation()
+                        }
+                    ) {
+                        Text("Reserve Now")
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { showReserveDialog = false }
+                    ) {
+                        Text("Cancel")
+                    }
                 }
             )
         }
@@ -420,8 +464,8 @@ fun AdvancedFilterDialog(
                     )
 
                     // Subcategory selection
-                    Text("Subcategories", fontWeight = FontWeight.SemiBold)
-                    val allSubCategories = menuItems.map { it.subCategory }.distinct()
+                    Text("Categories", fontWeight = FontWeight.SemiBold)
+                    val allSubCategories = menuItems.map { it.category }.distinct()
                     val subCategoryOptions  = listOf("All") + allSubCategories
                     Column {
                         subCategoryOptions.forEach { sub ->

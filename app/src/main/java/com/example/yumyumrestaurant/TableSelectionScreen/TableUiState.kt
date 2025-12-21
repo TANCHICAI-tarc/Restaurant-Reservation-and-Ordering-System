@@ -4,6 +4,7 @@ import androidx.compose.ui.geometry.Offset
 import com.example.yumyumrestaurant.data.RegionData.RegionEntity
 import com.example.yumyumrestaurant.data.ReservationData.ReservationEntity
 import com.example.yumyumrestaurant.data.TableData.TableEntity
+import java.io.File
 
 data class TableUiState(
     val tables: List<TableEntity> = emptyList(),
@@ -15,6 +16,8 @@ data class TableUiState(
 
     val scale: Float = 1f,
     val offset: Offset = Offset.Zero,
+    val preparedFiles: List<File> = emptyList(),
 
-    )
+    val showClearAllConfirmation: Boolean = false,
+)
 

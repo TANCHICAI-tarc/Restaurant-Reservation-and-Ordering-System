@@ -394,7 +394,7 @@ fun ReservationSummarySection(reservationUiState: ReservationUiState) {
             Text("Time", fontSize = 15.sp)
             Text(
                 text = "${reservationUiState.selectedStartTime.format(java.time.format.DateTimeFormatter.ofPattern("hh:mm a"))} - " +
-                        "${reservationUiState.selectedEndTime.format(java.time.format.DateTimeFormatter.ofPattern("hh:mm a"))}",
+                        "${reservationUiState.selectedStartTime.plusMinutes(reservationUiState.selectedDurationMinutes.toLong()).format(java.time.format.DateTimeFormatter.ofPattern("hh:mm a"))}",
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Medium
             )
@@ -423,18 +423,6 @@ fun ReservationSummarySection(reservationUiState: ReservationUiState) {
         ) {
             Text("Tables", fontSize = 15.sp)
             Text(tablesText, fontSize = 15.sp, fontWeight = FontWeight.Medium)
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text("Reservation Fee", fontSize = 15.sp)
-            Text(
-                "RM %.2f".format(reservationUiState.reservationFee),
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Medium
-            )
         }
 
         if (reservationUiState.specialRequests.isNotBlank()) {
@@ -628,7 +616,7 @@ fun CreditDebitBottomSheet(
         OutlinedTextField(
             value = orderState.cvv ?: "",
             onValueChange = { input ->
-                val filtered = input.filter { it.isDigit() }.take(3)
+                val filtered = input.filter { it.isDigit() }.take(4)
                 viewModel.updateCvv(filtered)
             },
             label = { Text("CVV") },
@@ -643,7 +631,7 @@ fun CreditDebitBottomSheet(
         )
         if (orderState.cvvError) {
             Text(
-                text = "CVV must be 3 digits",
+                text = "CVV must be 3 or 4 digits",
                 color = Color.Red,
                 style = MaterialTheme.typography.bodySmall
             )

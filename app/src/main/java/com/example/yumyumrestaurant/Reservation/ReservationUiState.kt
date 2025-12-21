@@ -1,6 +1,7 @@
 package com.example.yumyumrestaurant.Reservation
 
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import com.example.yumyumrestaurant.data.CustomerEntity
 import com.example.yumyumrestaurant.data.ReservationData.ReservationEntity
@@ -17,11 +18,20 @@ data class ReservationUiState (
 
     var selectedDate: LocalDate = LocalDate.now(),
 
-    var selectedStartTime: LocalTime = LocalTime.now()
-        .plusHours(2),
+    val selectedStartTime: LocalTime = run {
+        val suggested = LocalTime.now().plusHours(2)
+
+        val opening = LocalTime.of(9, 0)
+        val closing = LocalTime.of(22, 0)
+        when {
+            suggested.isBefore(opening) -> opening
+            suggested.isAfter(closing) -> opening
+            else -> suggested
+        }
+    },
 
     val selectedDurationMinutes: Int = 15,
-    var selectedEndTime: LocalTime = selectedStartTime.plusMinutes(selectedDurationMinutes.toLong()),
+    var selectedEndTime: LocalTime?=null,
 
 
     var guestCount: Int = 2,
@@ -32,6 +42,7 @@ data class ReservationUiState (
 
     var zoneExpanded:Boolean=false,
 
+    val reservationId: String = "",
     val specialRequests: String = "",
     val startTimeError: String = "",
     val endTimeError: String = "",
@@ -41,5 +52,5 @@ data class ReservationUiState (
     val selectedZone: String = "INDOOR",
 
     val customer: CustomerEntity = CustomerEntity(),
-    val reservationFee: Double = 0.0
-    )
+    val isReserving:Boolean=false
+)

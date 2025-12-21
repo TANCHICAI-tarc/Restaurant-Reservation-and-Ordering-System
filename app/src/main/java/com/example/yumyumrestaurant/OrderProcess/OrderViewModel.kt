@@ -5,6 +5,7 @@ import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.yumyumrestaurant.Reservation.ReservationViewModel
+import com.example.yumyumrestaurant.data.Menu.MenuDataSource
 import com.example.yumyumrestaurant.data.Order.OrderDataSource
 import com.example.yumyumrestaurant.data.Order.OrderRepository
 import com.example.yumyumrestaurant.data.ReservationData.ReservationEntity
@@ -17,7 +18,7 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 
 class OrderViewModel(
-    private val orderRepository: OrderRepository = OrderRepository(OrderDataSource())
+    private val orderRepository: OrderRepository = OrderRepository(OrderDataSource(), MenuDataSource())
 ) : ViewModel() {
     private val _orderUiState = MutableStateFlow(OrderUiState())
     val orderUiState: StateFlow<OrderUiState> = _orderUiState.asStateFlow()
@@ -120,8 +121,18 @@ class OrderViewModel(
 
     fun updateExpMonth(month: String) {
         val intMonth = month.toIntOrNull()
-        val error = intMonth == null || intMonth !in 1..12
-        _orderUiState.value = _orderUiState.value.copy(
+        val state = _orderUiState.value
+        val expYear = state.expYear.toIntOrNull()
+        val currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR) % 100
+        val currentMonth = java.util.Calendar.getInstance().get(java.util.Calendar.MONTH) + 1
+
+        val error = when {
+            intMonth == null || intMonth !in 1..12 -> true
+            expYear != null && (expYear < currentYear || (expYear == currentYear && intMonth < currentMonth)) -> true
+            else -> false
+        }
+
+        _orderUiState.value = state.copy(
             expMonth = month,
             expMonthError = error
         )
@@ -129,8 +140,22 @@ class OrderViewModel(
     }
 
     fun updateExpYear(year: String) {
-        val error = year.length != 2
-        _orderUiState.value = _orderUiState.value.copy(
+        val intYear = year.toIntOrNull()
+        val state = _orderUiState.value
+        val expMonth = state.expMonth.toIntOrNull()
+        val currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR) % 100
+        val currentMonth = java.util.Calendar.getInstance().get(java.util.Calendar.MONTH) + 1
+        val maxFutureYear = (currentYear + 10) % 100
+
+        val error = when {
+            intYear == null || year.length != 2 -> true
+            intYear < currentYear -> true
+            intYear > maxFutureYear -> true
+            intYear == currentYear && expMonth != null && expMonth < currentMonth -> true
+            else -> false
+        }
+
+        _orderUiState.value = state.copy(
             expYear = year,
             expYearError = error
         )
@@ -138,7 +163,7 @@ class OrderViewModel(
     }
 
     fun updateCvv(cvv: String) {
-        val error = cvv.length != 3
+        val error = cvv.length !in 3..4
         _orderUiState.value = _orderUiState.value.copy(
             cvv = cvv,
             cvvError = error

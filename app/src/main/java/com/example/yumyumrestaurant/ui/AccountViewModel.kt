@@ -1,19 +1,24 @@
 package com.example.yumyumrestaurant.ui
-
+import java.util.Calendar
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+import androidx.room.TypeConverters
 import com.example.yumyumrestaurant.Abouts
 import com.example.yumyumrestaurant.Account
 import com.example.yumyumrestaurant.UserSession
+import com.example.yumyumrestaurant.data.Converters
 import com.google.firebase.Firebase
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.UserProfileChangeRequest
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.PropertyName
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.delay
@@ -23,9 +28,14 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.regex.Pattern
+
+
+import com.google.firebase.Timestamp
+
 
 class UserViewModel : ViewModel() {
     private val _navigateToStateChoice = MutableStateFlow(false)
@@ -499,90 +509,90 @@ class UserLoginViewModel : ViewModel() {
     ) {
         val currentState = _uiState.value
 
-        _uiState.value = currentState.copy(
-            isLoading = false,
-            userId = "dummyUserId",
-            name = "Test User",
-            errorMessage = null
-        )
+//        _uiState.value = currentState.copy(
+//            isLoading = false,
+//            userId = "dummyUserId",
+//            name = "Test User",
+//            errorMessage = null
+//        )
+//
+//
+//        onSuccess()
 
 
-        onSuccess()
+        if (currentState.email.isBlank() || currentState.password.isBlank()) {
+            _uiState.value = currentState.copy(errorMessage = "Please fill in all fields")
+            return
+        }
+
+        _uiState.value = currentState.copy(isLoading = true, errorMessage = null)
+
+        viewModelScope.launch {
+            try {
+                val authResult = auth.signInWithEmailAndPassword(
+                    currentState.email,
+                    currentState.password
+                ).await()
+
+                authResult?.user?.let { firebaseUser ->
+                    val firebaseUid = firebaseUser.uid
+                    val userDoc = db.collection("Users").document(firebaseUid).get().await()
+                    val userId = userDoc.getString("userId") ?: ""
+
+                    try {
+                        if (!userDoc.exists()) throw Exception("User record not found in Firestore")
 
 
-//        if (currentState.email.isBlank() || currentState.password.isBlank()) {
-//            _uiState.value = currentState.copy(errorMessage = "Please fill in all fields")
-//            return
-//        }
-//
-//        _uiState.value = currentState.copy(isLoading = true, errorMessage = null)
-//
-//        viewModelScope.launch {
-//            try {
-//                val authResult = auth.signInWithEmailAndPassword(
-//                    currentState.email,
-//                    currentState.password
-//                ).await()
-//
-//                authResult?.user?.let { firebaseUser ->
-//                    val firebaseUid = firebaseUser.uid
-//                    val userDoc = db.collection("Users").document(firebaseUid).get().await()
-//                    val userId = userDoc.getString("userId") ?: ""
-//
-//                    try {
-//                        if (!userDoc.exists()) throw Exception("User record not found in Firestore")
-//
-//
-//
-//                        val userName = userDoc.getString("name") ?: ""
-//                        val phoneNum = userDoc.getString("phoneNum") ?: ""
-//
-//                        // Save current user session
-//                        UserSession.currentAccount = Account(
-//                            userId = userId,
-//                            name = userName,
-//                            email = currentState.email,
-//                            phoneNum = phoneNum
-//                        )
-//
-//
-//                        _uiState.value = currentState.copy(
-//                            isLoading = false,
-//                            userId = userId,
-//                            name = userName,
-//                            errorMessage = null
-//                        )
-//                        onSuccess()
-//                    } catch (firestoreEx: Exception) {
-//                        _uiState.value = currentState.copy(
-//                            isLoading = false,
-//                            userId = userId,
-//                            errorMessage = null
-//                        )
-//                        onSuccess()
-//
-//                    }
-//                } ?: run {
-//                    _uiState.value = currentState.copy(
-//                        isLoading = false,
-//                        errorMessage = "Login failed: No user returned"
-//                    )
-//                    onError("Login failed: No user returned")
-//                }
-//            } catch (e: Exception) {
-//                val errorMsg = when {
-//                    e.message?.contains("invalid email") == true -> "Invalid email format"
-//                    e.message?.contains("user-not-found") == true -> "No account found with this email"
-//                    e.message?.contains("wrong-password") == true -> "Incorrect password"
-//                    else -> "Login failed: ${e.message}"
-//                }
-//                _uiState.value = currentState.copy(
-//                    isLoading = false,
-//                    errorMessage = errorMsg
-//                )
-//                onError(errorMsg)
-//            }
-//        }
+
+                        val userName = userDoc.getString("name") ?: ""
+                        val phoneNum = userDoc.getString("phoneNum") ?: ""
+
+                        // Save current user session
+                        UserSession.currentAccount = Account(
+                            userId = userId,
+                            name = userName,
+                            email = currentState.email,
+                            phoneNum = phoneNum
+                        )
+
+
+                        _uiState.value = currentState.copy(
+                            isLoading = false,
+                            userId = userId,
+                            name = userName,
+                            errorMessage = null
+                        )
+                        onSuccess()
+                    } catch (firestoreEx: Exception) {
+                        _uiState.value = currentState.copy(
+                            isLoading = false,
+                            userId = userId,
+                            errorMessage = null
+                        )
+                        onSuccess()
+
+                    }
+                } ?: run {
+                    _uiState.value = currentState.copy(
+                        isLoading = false,
+                        errorMessage = "Login failed: No user returned"
+                    )
+                    onError("Login failed: No user returned")
+                }
+            } catch (e: Exception) {
+                val errorMsg = when {
+                    e.message?.contains("invalid email") == true -> "Invalid email format"
+                    e.message?.contains("user-not-found") == true -> "No account found with this email"
+                    e.message?.contains("wrong-password") == true -> "Incorrect password"
+                    else -> "Login failed: ${e.message}"
+                }
+                _uiState.value = currentState.copy(
+                    isLoading = false,
+                    errorMessage = errorMsg
+                )
+                onError(errorMsg)
+            }
+        }
     }
 }
 
@@ -889,3 +899,284 @@ class AboutViewModel : ViewModel() {
         data class Error(val message: String) : LoadingState()
     }
 }
+
+@RequiresApi(Build.VERSION_CODES.O)
+class ReportViewModel : ViewModel() {
+
+    private val db = FirebaseFirestore.getInstance()
+
+    private val _reservations = MutableStateFlow<List<ReservationEntity>>(emptyList())
+    val reservations: StateFlow<List<ReservationEntity>> = _reservations.asStateFlow()
+
+    private val _payments = MutableStateFlow<List<Payment>>(emptyList())
+    val payments: StateFlow<List<Payment>> = _payments.asStateFlow()
+
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
+    private val _errorMessage = MutableStateFlow<String?>(null)
+    val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
+
+    private val _selectedYear = MutableStateFlow<Int>(LocalDate.now().year)
+    val selectedYear: StateFlow<Int> = _selectedYear.asStateFlow()
+
+    private val _reportType = MutableStateFlow<String>("")
+    val reportType: StateFlow<String> = _reportType.asStateFlow()
+
+    private val _sortedMonthlyReservations = MutableStateFlow<List<MonthlyReservationData>>(emptyList())
+    val sortedMonthlyReservations: StateFlow<List<MonthlyReservationData>> = _sortedMonthlyReservations.asStateFlow()
+
+    private val _sortedMonthlyPayments = MutableStateFlow<List<MonthlyPaymentData>>(emptyList())
+    val sortedMonthlyPayments: StateFlow<List<MonthlyPaymentData>> = _sortedMonthlyPayments.asStateFlow()
+
+    private val _monthlyReservations = MutableStateFlow<List<MonthlyReservationData>>(emptyList())
+    val monthlyReservations: StateFlow<List<MonthlyReservationData>> = _monthlyReservations.asStateFlow()
+
+    private val _monthlyPayments = MutableStateFlow<List<MonthlyPaymentData>>(emptyList())
+    val monthlyPayments: StateFlow<List<MonthlyPaymentData>> = _monthlyPayments.asStateFlow()
+
+    fun setYear(year: Int) {
+        _selectedYear.value = year
+    }
+
+    fun setReportType(type: String) {
+        _reportType.value = type
+        clearData()
+    }
+
+    fun fetchDataByYear() {
+        viewModelScope.launch {
+            try {
+                _isLoading.value = true
+                _errorMessage.value = null
+
+                val year = _selectedYear.value
+                val type = _reportType.value
+
+                val currentYear = LocalDate.now().year
+                if (year !in 0..currentYear) {
+                    throw IllegalArgumentException("Year must be between 0 and $currentYear")
+                }
+
+                if (type.isEmpty()) {
+                    throw IllegalArgumentException("Please select a report type")
+                }
+
+                clearData()
+
+                when (type) {
+                    "Reservation Report" -> {
+                        getAllReservationsForYear(year)
+                        processMonthlyReservations()
+                    }
+                    "Sales Report" -> {
+                        getAllPaymentsForYear(year)
+                        processMonthlyPayments()
+                    }
+                }
+
+            } catch (e: Exception) {
+                _errorMessage.value = "Error fetching data: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    private suspend fun getAllReservationsForYear(year: Int) {
+        try {
+            val startDate = "$year-01-01"
+            val endDate = "${year + 1}-01-01"
+
+            val querySnapshot = db.collection("Reservations")
+                .whereGreaterThanOrEqualTo("date", startDate)
+                .whereLessThan("date", endDate)
+                .get()
+                .await()
+
+            val reservationsList = querySnapshot.documents.mapNotNull { document ->
+                document.toObject(ReservationEntity::class.java)?.apply {
+                    reservationId = document.id
+                }
+            }
+
+            _reservations.value = reservationsList
+
+        } catch (e: Exception) {
+            throw Exception("Failed to fetch reservations: ${e.message}")
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private suspend fun getAllPaymentsForYear(year: Int) {
+        try {
+            val calendar = Calendar.getInstance().apply {
+                set(year, Calendar.JANUARY, 1, 0, 0, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+            val startOfYear = Timestamp(calendar.time)
+
+            calendar.add(Calendar.YEAR, 1)
+            val startOfNextYear = Timestamp(calendar.time)
+
+            val querySnapshot = db.collection("Payments")
+                .whereGreaterThanOrEqualTo("PaymentDate", startOfYear)
+                .whereLessThan("PaymentDate", startOfNextYear)
+                .get()
+                .await()
+
+            val paymentsList = querySnapshot.documents.mapNotNull { document ->
+                document.toObject(Payment::class.java)?.apply {
+                    paymentID = document.id
+                }?.takeIf { it.paymentDate != null }
+            }
+
+            _payments.value = paymentsList
+        } catch (e: Exception) {
+            throw Exception("Failed to fetch payments: ${e.message}")
+        }
+    }
+
+    private fun processMonthlyReservations() {
+        val reservationsList = _reservations.value
+        val monthlyData = (1..12).map { month ->
+            MonthlyReservationData(
+                month = month,
+                monthName = getMonthName(month),
+                reservationCount = 0,
+                guestCount = 0,
+                reservations = emptyList()
+            )
+        }.toMutableList()
+
+        val groupedByMonth = reservationsList.groupBy { reservation ->
+            try {
+                val dateParts = reservation.date.split("-")
+                if (dateParts.size >= 2) dateParts[1].toInt() else 0
+            } catch (e: Exception) { 0 }
+        }
+
+        groupedByMonth.forEach { (month, reservations) ->
+            if (month in 1..12) {
+                val monthIndex = month - 1
+                monthlyData[monthIndex] = MonthlyReservationData(
+                    month = month,
+                    monthName = getMonthName(month),
+                    reservationCount = reservations.size,
+                    guestCount = reservations.sumOf { it.guestCount },
+                    reservations = reservations
+                )
+            }
+        }
+
+        _monthlyReservations.value = monthlyData
+        val sortedData = monthlyData.sortedByDescending { it.reservationCount }
+        _sortedMonthlyReservations.value = sortedData
+    }
+
+    private fun processMonthlyPayments() {
+        val paymentsList = _payments.value
+        val monthlyData = (1..12).map { month ->
+            MonthlyPaymentData(
+                month = month,
+                monthName = getMonthName(month),
+                totalAmount = 0.0,
+                transactionCount = 0,
+                payments = emptyList()
+            )
+        }.toMutableList()
+
+        val groupedByMonth = paymentsList.groupBy { payment ->
+            payment.paymentDate?.toDate()?.let { date ->
+                val cal = Calendar.getInstance()
+                cal.time = date
+                cal.get(Calendar.MONTH) + 1
+            } ?: 0
+        }
+
+        groupedByMonth.forEach { (month, payments) ->
+            if (month in 1..12) {
+                val monthIndex = month - 1
+                monthlyData[monthIndex] = MonthlyPaymentData(
+                    month = month,
+                    monthName = getMonthName(month),
+                    totalAmount = payments.sumOf { it.amountPaid },
+                    transactionCount = payments.size,
+                    payments = payments
+                )
+            }
+        }
+
+        _monthlyPayments.value = monthlyData
+        val sortedData = monthlyData.sortedByDescending { it.totalAmount }
+        _sortedMonthlyPayments.value = sortedData
+    }
+
+    private fun getMonthName(month: Int): String {
+        return when (month) {
+            1 -> "January"
+            2 -> "February"
+            3 -> "March"
+            4 -> "April"
+            5 -> "May"
+            6 -> "June"
+            7 -> "July"
+            8 -> "August"
+            9 -> "September"
+            10 -> "October"
+            11 -> "November"
+            12 -> "December"
+            else -> "Unknown"
+        }
+    }
+
+    fun clearData() {
+        _reservations.value = emptyList()
+        _payments.value = emptyList()
+        _monthlyReservations.value = emptyList()
+        _monthlyPayments.value = emptyList()
+        _sortedMonthlyReservations.value = emptyList()
+        _sortedMonthlyPayments.value = emptyList()
+    }
+}
+
+data class MonthlyReservationData(
+    val month: Int,
+    val monthName: String,
+    val reservationCount: Int,
+    val guestCount: Int,
+    val reservations: List<ReservationEntity>
+)
+
+data class MonthlyPaymentData(
+    val month: Int,
+    val monthName: String,
+    val totalAmount: Double,
+    val transactionCount: Int,
+    val payments: List<Payment>
+)
+
+@RequiresApi(Build.VERSION_CODES.O)
+@Entity(tableName = "Reservations")
+@TypeConverters(Converters::class)
+data class ReservationEntity(
+    @PrimaryKey
+    var reservationId: String = "",
+    var date: String = "",
+    var startTime: String = "",
+    var durationMinutes: Int = 15,
+    var endTime: String = "",
+
+    var guestCount: Int = 2,
+    var zone: String = "INDOOR",
+    var specialRequests: String = "",
+    var reservationStatus: String = "Confirmed",
+    var userId: String = ""
+)
+
+data class Payment(
+    @get:PropertyName("PaymentID") @set:PropertyName("PaymentID") var paymentID: String = "",
+    @get:PropertyName("PaymentMethod") @set:PropertyName("PaymentMethod") var paymentMethod: String = "",
+    @get:PropertyName("PaymentDate") @set:PropertyName("PaymentDate") var paymentDate: Timestamp? = null,
+    @get:PropertyName("AmountPaid") @set:PropertyName("AmountPaid") var amountPaid: Double = 0.0,
+)

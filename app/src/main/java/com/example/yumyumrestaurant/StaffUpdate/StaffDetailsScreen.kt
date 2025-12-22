@@ -264,54 +264,61 @@ fun TableReservationCard(
     tables: List<TableEntity>
 ) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(6.dp)
     ) {
-        Box(modifier = Modifier.padding(16.dp)) {
-            Column(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+
+            Text(
+                text = "Table Reservation",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(Modifier.height(8.dp))
+
+            Text("Guests: ${reservation.guestCount}")
+            Text("Date: ${formatDate(reservation.date)}")
+            Text("Time: ${formatTimeRange(reservation.startTime, reservation.endTime)}")
+
+            Spacer(Modifier.height(12.dp))
+
+            Text(
+                text = "Reserved Tables",
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            Spacer(Modifier.height(8.dp))
+
+            if (tables.isEmpty()) {
                 Text(
-                    "Table Reservation",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
+                    text = "No table assigned",
+                    color = Color.Gray
                 )
+            } else {
+                tables.forEachIndexed { index, table ->
 
-                Spacer(Modifier.height(8.dp))
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        elevation = CardDefaults.cardElevation(2.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
 
-                Text(
-                    text = "Guests: ${reservation.guestCount}"
-                )
+                            Text(
+                                text = "Table ${table.label}",
+                                fontWeight = FontWeight.SemiBold
+                            )
 
-                Text(
-                    "Date: ${formatDate(reservation.date)}"
-                )
-                Text(
-                    "Time: ${formatTimeRange(reservation.startTime, reservation.endTime)}"
-                )
+                            Spacer(Modifier.height(4.dp))
 
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("Reserved Tables", style = MaterialTheme.typography.titleMedium)
-
-                if (tables.isEmpty()) {
-                    Text(
-                        text = "No table assigned",
-                        color = Color.Gray
-                    )
-                } else {
-                    tables.forEach { table ->
-                        Text(
-                            text = "Table ${table.label}"
-                        )
-                        Text(
-                            text = "Seats: ${table.seatCount} seats"
-                        )
-                        Text(
-                            text = "Zone: ${table.zone}"
-                        )
+                            Text("Seats: ${table.seatCount}")
+                            Text("Zone: ${table.zone}")
+                        }
                     }
                 }
             }
-
         }
     }
 }

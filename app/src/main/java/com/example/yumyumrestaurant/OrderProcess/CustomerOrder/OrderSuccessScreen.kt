@@ -27,7 +27,7 @@ import com.example.yumyumrestaurant.R
 
 @Composable
 fun OrderSuccessScreen(
-    onBackToHome: () -> Unit,
+    onBackToViewMyReservation: () -> Unit,
     modifier: Modifier
 ) {
     Column(
@@ -53,15 +53,15 @@ fun OrderSuccessScreen(
 
         Spacer(modifier = Modifier.height(dimensionResource(R.dimen.dp_16)))
 
-        // Back to Home Button
+
         Button(
-            onClick = { onBackToHome() },
+            onClick = { onBackToViewMyReservation() },
             shape = RoundedCornerShape(12.dp),
             modifier = Modifier
                 .width(180.dp)
         ) {
             Text(
-                text = "Back to Start",
+                text = "View My Reservation",
                 fontSize = 20.sp
             )
         }

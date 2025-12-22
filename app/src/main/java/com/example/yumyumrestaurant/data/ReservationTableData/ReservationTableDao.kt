@@ -21,4 +21,13 @@ interface ReservationTableDao {
     suspend fun clearAllReservationsTables()
 
 
+    @Query("SELECT * FROM Reservation_Table WHERE reservationId = :resId")
+    suspend fun getLinksByReservationId(resId: String): List<Reservation_Table_Entity>
+
+
+    @Query("SELECT tableId FROM Reservation_Table WHERE reservationId = :resId")
+    suspend fun getTableIdsByReservationId(resId: String): List<String>
+
+
+
 }

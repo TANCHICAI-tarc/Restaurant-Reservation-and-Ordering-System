@@ -1,5 +1,6 @@
 package com.example.yumyumrestaurant.data.ReservationTableData
 
+import androidx.room.Query
 import com.example.yumyumrestaurant.data.ReservationData.ReservationEntity
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.Flow
@@ -26,10 +27,11 @@ class ReservationTableRepository(private val reservationTableDao: ReservationTab
         }
     }
 
-    suspend fun insertReservationTableCrossRef(reservationId: String, tableId: String) {
+    suspend fun insertReservationTableCrossRef(reservationId: String, tableId: String,tableLocationMap:List<String>) {
         val reservationTable = Reservation_Table_Entity(
             reservationId = reservationId,
-            tableId = tableId
+            tableId = tableId,
+            tableLocationMap = tableLocationMap
         )
         reservationTableDao.insertReservationTable(reservationTable)
         firestore.collection("Reservation_Table")
@@ -37,6 +39,21 @@ class ReservationTableRepository(private val reservationTableDao: ReservationTab
             .set(reservationTable)
             .await()
     }
+
+
+
+    suspend fun getLinksByReservationId(resId: String): List<Reservation_Table_Entity> {
+        return reservationTableDao.getLinksByReservationId(resId)
+    }
+
+    suspend fun getTableIdsByReservationId(resId: String): List<String> {
+        return reservationTableDao.getTableIdsByReservationId(resId)
+    }
+
+
+
+
+
 
 
 }

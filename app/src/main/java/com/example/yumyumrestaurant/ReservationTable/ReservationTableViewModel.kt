@@ -20,6 +20,7 @@ import com.example.yumyumrestaurant.Reservation.ReservationViewModel
 import com.example.yumyumrestaurant.TableSelectionScreen.TableUiState
 import com.example.yumyumrestaurant.TableSelectionScreen.TableViewModel
 import com.example.yumyumrestaurant.data.RegionData.RegionRepository
+import com.example.yumyumrestaurant.data.ReservationData.ReservationEntity
 import com.example.yumyumrestaurant.data.ReservationData.ReservationRepository
 import com.example.yumyumrestaurant.data.ReservationTableData.ReservationTableRepository
 import com.example.yumyumrestaurant.data.ReservationTableData.Reservation_TableDatabase
@@ -51,15 +52,16 @@ sealed class CapturePurpose {
 class ReservationTableViewModelFactory(
     private val tableViewModel: TableViewModel,
     private val reservationViewModel: ReservationViewModel,
-
-    private val reservationTableRepository: ReservationTableRepository
+    private val reservationTableRepository: ReservationTableRepository,
+    private val reservationRepository: ReservationRepository,
+    private val tableRepository: TableRepository
 
 ) : ViewModelProvider.Factory {
 
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(ReservationTableViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return ReservationTableViewModel(tableViewModel, reservationViewModel,reservationTableRepository) as T
+            return ReservationTableViewModel(tableViewModel, reservationViewModel,reservationTableRepository,reservationRepository,tableRepository) as T
         }
 
         throw IllegalArgumentException("Unknown ViewModel class: " + modelClass.name)
@@ -69,7 +71,9 @@ class ReservationTableViewModelFactory(
 class ReservationTableViewModel(
     private val tableVM: TableViewModel,
     private val reservationVM: ReservationViewModel,
-    private val reservationTableRepository: ReservationTableRepository
+    private val reservationTableRepository: ReservationTableRepository,
+    private val reservationRepository: ReservationRepository,
+    private val tableRepository: TableRepository
 
 ) : ViewModel() {
     private val _isReservationInProgress = MutableStateFlow(false)
@@ -208,14 +212,15 @@ class ReservationTableViewModel(
 
 
 
-    fun saveReservationWithTables(selectedTables: List<TableEntity>, reservationId: String) {
+    fun saveReservationWithTables(selectedTables: List<TableEntity>, reservationId: String,tableLocationMap:List<String>) {
 
-
+        Log.d("Debug map",tableLocationMap.toString())
         viewModelScope.launch {
             selectedTables.forEach { table ->
                 reservationTableRepository.insertReservationTableCrossRef(
                     reservationId = reservationId,
-                    tableId = table.tableId
+                    tableId = table.tableId,
+                    tableLocationMap=tableLocationMap
                 )
             }
         }
@@ -406,8 +411,54 @@ class ReservationTableViewModel(
     }
 
 
+    fun loadReservationDataById(resId: String) {
+        viewModelScope.launch {
+            try {
+                // 1. Fetch the main reservation header
+                val reservation = reservationRepository.getReservationById(resId)
+
+
+                val links = reservationTableRepository.getLinksByReservationId(resId)
+
+
+                val physicalTables = links.map { link ->
+                    tableRepository.getTableById(link.tableId)
+
+
+                }.filterNotNull()
+
+                Log.d("ViewModel", "Links found: ${links.size}")
+
+                val pathStrings = links.flatMap { it.tableLocationMap ?: emptyList() }.distinct()
+
+                val mapImagesAsFiles = pathStrings.map { path ->
+                    java.io.File(path)
+                }
+                Log.d("ViewModel", "Path strings found: ${pathStrings.size}+${mapImagesAsFiles}")
+
+                 _reservationTableUiState.update { currentState ->
+                    currentState.copy(
+                        selectedTables = physicalTables,
+                        capturedFiles = mapImagesAsFiles
+                    )
+                }
+
+                 reservation?.let {
+                    reservationVM.updateSelectedReservation(it)
+                }
+
+            } catch (e: Exception) {
+
+                Log.e("ViewModel", "Error loading reservation data", e)
+            }
+        }
+    }
+
+
+
 
 }
+
 
 
 

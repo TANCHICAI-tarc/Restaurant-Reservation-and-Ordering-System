@@ -142,7 +142,7 @@ class StaffOperationViewModel(
         }
     }
 
-    private suspend fun loadRelatedData(reservation: ReservationEntity) {
+    suspend fun loadRelatedData(reservation: ReservationEntity) {
         val resID = reservation.reservationId
 
         // Ensure orders are loaded

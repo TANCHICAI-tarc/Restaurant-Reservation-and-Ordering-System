@@ -16,7 +16,8 @@ import com.example.yumyumrestaurant.data.TableData.TableEntity
 )
 data class Reservation_Table_Entity(
     val reservationId: String = "",
-    val tableId: String = ""
+    val tableId: String = "",
+    val tableLocationMap: List<String> = emptyList()
 )
 
 

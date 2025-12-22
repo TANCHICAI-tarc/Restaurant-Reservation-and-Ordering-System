@@ -240,7 +240,7 @@ fun ReservationFormScreenBody( reservationTableviewModel: ReservationTableViewMo
             onValueChange = { reservationTableviewModel.reservationViewModel.setSpecialRequests(it) },
             modifier = Modifier.fillMaxWidth(),
             placeholder = { Text("Example: Need a high chair.") },
-            label = { Text("Special Request?") },
+            label = { Text("Add a request") },
             singleLine = false,
             maxLines = 5,
         )

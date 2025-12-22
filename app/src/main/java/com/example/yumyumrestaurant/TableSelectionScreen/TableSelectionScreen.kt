@@ -538,6 +538,14 @@ fun TableSelectionScreenBody(
                     remarkMessage(Color.Red, "T0", "Table Reserved")
                     remarkMessage(Color.Blue, "T0", "Table You Selected")
                 }
+                if (reservationTableUiState.isCapturing) {
+                    SelectedTablesSummarySection(
+                        selectedTables = tableUiState.selectedTables,
+                        onRemove = { reservationTableViewModel.tableViewModel.removeTable(it) },
+                        reservationTableViewModel.tableViewModel,
+                        expandeds=true
+                    )
+                }
 
 
             }
@@ -576,18 +584,9 @@ fun TableSelectionScreenBody(
                     .padding(8.dp)
             ) {
 
-//                if (canReserve) {
-//                    Row(verticalAlignment = Alignment.CenterVertically) {
-//                        CircularProgressIndicator(
-//                            color = Color.White,
-//                            modifier = Modifier.size(24.dp)
-//                        )
-//                        Spacer(modifier = Modifier.width(8.dp))
-//                        Text("Processing...")
-//                    }
-//                } else {
+
                     Text("Reserve")
-//                }
+
 
             }
 

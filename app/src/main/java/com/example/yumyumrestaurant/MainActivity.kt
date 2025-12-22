@@ -1,5 +1,6 @@
 package com.example.yumyumrestaurant
 
+import android.app.Application
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -48,18 +49,32 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.yumyumrestaurant.OrderProcess.CustomerOrder.MenuScreen
 import com.example.yumyumrestaurant.OrderProcess.MenuViewModel
 import com.example.yumyumrestaurant.OrderProcess.OrderViewModel
+import com.example.yumyumrestaurant.Reservation.ReservationDetailScreen
+import com.example.yumyumrestaurant.Reservation.ReservationViewModel
+import com.example.yumyumrestaurant.ReservationTable.ReservationTableViewModel
+import com.example.yumyumrestaurant.ReservationTable.ReservationTableViewModelFactory
+import com.example.yumyumrestaurant.StaffUpdate.StaffOperationViewModel
+import com.example.yumyumrestaurant.TableDetailScreen.TableDetailScreen
+import com.example.yumyumrestaurant.TableSelectionScreen.TableViewModel
+import com.example.yumyumrestaurant.data.ReservationData.ReservationRepository
+import com.example.yumyumrestaurant.data.ReservationTableData.ReservationTableRepository
+import com.example.yumyumrestaurant.data.ReservationTableData.Reservation_TableDatabase
+import com.example.yumyumrestaurant.data.TableData.TableRepository
 import com.example.yumyumrestaurant.shareFilterScreen.SharedFilterViewModel
 import com.example.yumyumrestaurant.ui.AboutViewModel
 import com.example.yumyumrestaurant.ui.ResetViewModel
@@ -130,6 +145,86 @@ fun AppScreen(){
         composable("AdminPage"){
             AdminPage(navController)
         }
+
+        composable("Report") {
+            Report(navController = navController)
+        }
+
+
+
+
+        composable(
+            route = "reservation_detail/{resId}",
+            arguments = listOf(navArgument("resId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val resId = backStackEntry.arguments?.getString("resId") ?: ""
+            val context = LocalContext.current
+            val application = context.applicationContext as Application
+
+
+            val database = Reservation_TableDatabase.getReservationTableDatabase(application)
+            val reservationTableRepository = ReservationTableRepository(database.reservationTableDao())
+            val reservationRepository = ReservationRepository(database.reservationDao())
+            val tableRepository = TableRepository(database.tableDao())
+
+
+            val reservationTableViewModel: ReservationTableViewModel = viewModel(
+                factory = ReservationTableViewModelFactory(
+                    tableViewModel = viewModel(),
+                    reservationViewModel = viewModel(),
+                    reservationTableRepository = reservationTableRepository,
+                    reservationRepository = reservationRepository,
+                    tableRepository = tableRepository
+                )
+            )
+
+            val staffViewModel: StaffOperationViewModel = viewModel()
+            val orderViewModel: OrderViewModel = viewModel()
+
+            ReservationDetailScreen(
+                reservationId = resId,
+                reservationTableViewModel = reservationTableViewModel,
+                staffViewModel = staffViewModel,
+                orderViewModel = orderViewModel,
+                onNavigateToTableDetails = { tableId ->
+
+                    navController.navigate("table_preview/$tableId")
+                },
+                onNavigateUp = { navController.navigateUp() }
+            )
+        }
+
+
+        composable(
+                    route = "table_preview/{tableId}",
+                    arguments = listOf(navArgument("tableId") { type = NavType.StringType })
+                ) { backStackEntry ->
+                    val tableId = backStackEntry.arguments?.getString("tableId") ?: ""
+
+
+                    val context = LocalContext.current
+                    val application = context.applicationContext as Application
+                    val database = Reservation_TableDatabase.getReservationTableDatabase(application)
+
+                    val reservationTableViewModel: ReservationTableViewModel = viewModel(
+                        factory = ReservationTableViewModelFactory(
+                            tableViewModel = viewModel(),
+                            reservationViewModel = viewModel(),
+                            reservationTableRepository = ReservationTableRepository(database.reservationTableDao()),
+                            reservationRepository = ReservationRepository(database.reservationDao()),
+                            tableRepository = TableRepository(database.tableDao())
+                        )
+                    )
+
+                    TableDetailScreen(
+                        tableId = tableId,
+                        reservationTableViewModel = reservationTableViewModel,
+                        onNavigateUp = { navController.navigateUp() },
+                        isReadOnly = true
+                    )
+                }
+
+
     }
 }
 
@@ -278,7 +373,7 @@ fun UserPage(navController: NavHostController, userViewModel: UserViewModel) {
                                 text = when (currentScreen) {
                                     USER_HOME -> "Home"
                                     VIEW_MENU -> "ViewMenu"
-                                    VIEW_RESERVATION -> "ViewReservation"
+                                    VIEW_RESERVATION -> "View My Reservation"
                                     USER_PROFILE -> "Profile"
                                     "MainUserProfile" -> "MainUserProfile"
                                     "UserEdit" -> "UserEdit"
@@ -310,9 +405,15 @@ fun UserPage(navController: NavHostController, userViewModel: UserViewModel) {
             when (currentScreen) {
                 USER_HOME  -> UserHome(navController, Modifier.padding(innerPadding))
                 RESERVATION_FLOW -> Reservation(
+                    userViewModel,
                     drawerState = drawerState,
                     scope = scope,
-                    openDrawer = { scope.launch { drawerState.open() } }
+                    openDrawer = { scope.launch { drawerState.open() } },
+                    onNavigateToViewReservation = {
+                        currentScreen = VIEW_RESERVATION
+                    },
+
+                    sharedFilterViewModel
                 )
                 VIEW_MENU-> {
                     val menuViewModel: MenuViewModel = viewModel()
@@ -330,13 +431,14 @@ fun UserPage(navController: NavHostController, userViewModel: UserViewModel) {
                         onNavigateToCart = {} // blocked anyway
                     )
                 }
-                VIEW_RESERVATION -> ViewReservation(navController, userViewModel,Modifier.padding(innerPadding))
+                VIEW_RESERVATION -> ViewReservation(navController, userViewModel,sharedFilterViewModel,Modifier.padding(innerPadding))
                 USER_PROFILE -> UserProfile(navController, onLogout = {
                     Firebase.auth.signOut()
                     navController.navigate("Home") {
                         popUpTo(0) { inclusive = true }
                     }
                 })
+
                 "MainUserProfile" -> MainUserProfile(navController, userViewModel, onLogout = {
                     Firebase.auth.signOut()
                     navController.navigate("Home") {

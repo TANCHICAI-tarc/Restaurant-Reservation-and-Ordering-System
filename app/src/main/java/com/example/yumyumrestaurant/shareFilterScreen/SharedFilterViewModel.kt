@@ -2,12 +2,17 @@ package com.example.yumyumrestaurant.shareFilterScreen
 
 import android.app.Application
 import android.util.Log
+import androidx.compose.material3.DatePickerDefaults.dateFormatter
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.yumyumrestaurant.data.ReservationData.ReservationEntity
 import com.example.yumyumrestaurant.data.ReservationData.ReservationRepository
+import com.google.firebase.Firebase
+import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -15,7 +20,8 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-
+import kotlin.collections.remove
+import kotlin.text.clear
 
 
 class SharedFilterViewModel(
@@ -31,7 +37,13 @@ class SharedFilterViewModel(
     private val _errorEvent = MutableSharedFlow<String>()
     val errorEvent: SharedFlow<String> = _errorEvent
 
+    val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
 
+
+
+
+
+    val timeFormatter = DateTimeFormatter.ofPattern("hh:mm a", Locale.ENGLISH)
 
     fun updateSearchQuery(query: String) {
         _uiState.update { it.copy(searchQuery = query) }
@@ -70,24 +82,69 @@ class SharedFilterViewModel(
                 hasFiltered = false
             )
         }
+        performSearch()
     }
 
 
 
     fun toggleLocation(location: String, enabled: Boolean) {
+        val location = normalizeInput(location)
+
         _uiState.update { state ->
             val current = state.selectedLocations.toMutableList()
             if (location == "All") {
-                if (enabled) current.clear().also { current.add("All") } else current.remove("All")
+                if (enabled) {
+                    // "All" selected → clear others and keep only "All"
+                    current.clear()
+                    current.add("All")
+                } else {
+                    // "All" deselected → just remove it
+                    current.remove("All")
+                }
             } else {
-                current.remove("All")
-                if (enabled) current.add(location) else current.remove(location)
+                current.remove("All") // deselect "All" if any specific category is toggled
+
+                if (enabled) {
+                    current.add(location)
+                } else {
+                    current.remove(location)
+                }
             }
+
             state.copy(selectedLocations = current)
         }
+
     }
 
-    fun setReservationDate(date: LocalDate) { _uiState.update { it.copy(reservationDate = date) } }
+
+    private fun normalizeInput(input: String): String {
+        val normalizedInput = input.trim().lowercase()
+        if (normalizedInput.equals("all")) {
+            return "All"
+        }
+
+        return when {
+            normalizedInput.contains("INDOOR") -> "Indoor"
+            normalizedInput.contains("OUTDOOR") -> "Outdoor"
+            else -> input.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+        }
+
+    }
+    fun setReservationDate(date: LocalDate) {
+        _uiState.update { it.copy(reservationDate = date)
+        }
+
+
+    }
+
+    fun setReservationMadeDate(date: LocalDate) {
+        _uiState.update { it.copy(reservationMadeDate = date)
+        }
+
+
+
+
+    }
 
     fun setStartTime(time: LocalTime) { _uiState.update { it.copy(startTime = time) } }
     fun setEndTime(time: LocalTime) { _uiState.update { it.copy(endTime = time) } }
@@ -105,124 +162,6 @@ class SharedFilterViewModel(
 
 
 
-//    fun performSearch() {
-//
-//        val trimmedQuery = _uiState.value.searchQuery.trim()
-//        _uiState.update { it.copy(searchQuery = trimmedQuery) }
-//
-//        val state = _uiState.value
-//
-//        _filteredReservationData.value = state.allReservationData
-//        val selectedLocation = state.selectedLocations
-//
-//
-//
-//        _filteredReservationData.value = state.allReservationData.filter { item ->
-//
-//
-//            val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
-//            val itemDate = try {
-//                LocalDate.parse(item.dateFound, dateFormatter)
-//            } catch (e: Exception) {
-//                LocalDate.MIN
-//            }
-//
-//            val timeFormatter = DateTimeFormatter.ofPattern("hh:mm a", Locale.ENGLISH)
-//
-//
-//            val normalizedTimeString = item.timeFound.trim().replace("am", "AM").replace("pm", "PM")
-//
-//            val itemTime = LocalTime.parse(normalizedTimeString, timeFormatter)
-//
-//
-//
-//
-//            val matchesCategory = "All" in selectedCategory || selectedCategory.isEmpty() || item.category in selectedCategory
-//            val matchesLocation = "All" in selectedLocation || selectedLocation.isEmpty() || item.foundLocation in selectedLocation
-//            val matchesSubmitter = "All" in selectedSubmitters || selectedSubmitters.isEmpty() || item.reporter.type in selectedSubmitters
-//            val matchesStatus = "All" in selectedStatuses || selectedStatuses.isEmpty() || item.status in selectedStatuses
-//
-//            val matchesSearch = trimmedQuery.isBlank() ||
-//
-//                    item.id.contains(trimmedQuery, ignoreCase = true) ||
-//                    item.itemTitle.contains(trimmedQuery, ignoreCase = true) ||
-//                    item.description?.contains(trimmedQuery, ignoreCase = true) == true
-//
-//
-//
-//            val matchesDate = (state.startDate == null || !itemDate.isBefore(state.startDate)) &&
-//                    (state.endDate == null || !itemDate.isAfter(state.endDate))
-//
-//            val matchesTime = (state.startTime == null || !itemTime.isBefore(state.startTime)) &&
-//                    (state.endTime == null || !itemTime.isAfter(state.endTime))
-//
-//            matchesCategory &&
-//                    matchesLocation &&
-//                    matchesSubmitter &&
-//                    matchesStatus &&
-//                    matchesSearch &&
-//                    matchesDate &&
-//                    matchesTime
-//
-//
-//        }
-//
-//
-//        _filteredClaimItems.value = state.allClaimItems.filter { claim ->
-//
-//
-//            val claimDateTime = LocalDateTime.ofInstant(
-//                Instant.ofEpochMilli(claim.claimTime),
-//                ZoneId.systemDefault()
-//            )
-//
-//            val claimDate = claimDateTime.toLocalDate()
-//            val claimTime = claimDateTime.toLocalTime()
-//
-//            val matchesDate = (state.startDate == null || !claimDate.isBefore(state.startDate)) &&
-//                    (state.endDate == null || !claimDate.isAfter(state.endDate))
-//
-//            val matchesTime = (state.startTime == null || !claimTime.isBefore(state.startTime)) &&
-//                    (state.endTime == null || !claimTime.isAfter(state.endTime))
-//
-//
-//
-//
-//            val matchesCategory = "All" in selectedCategory || selectedCategory.isEmpty() ||
-//                    (claim.item?.category in selectedCategory)
-//
-//            val matchesLocation = "All" in selectedLocation || selectedLocation.isEmpty() ||
-//                    (claim.item?.foundLocation in selectedLocation)
-//
-//            val matchesStatus = "All" in selectedStatuses || selectedStatuses.isEmpty() ||
-//                    (claim.claimStatus in selectedStatuses)
-//
-//
-//
-//            val matchesSearch = trimmedQuery.isBlank() ||
-//                    claim.claimId.contains(trimmedQuery, ignoreCase = true) ||
-//                    (claim.item?.id?.contains(trimmedQuery, ignoreCase = true) == true) ||
-//                    (claim.item?.itemTitle?.contains(trimmedQuery, ignoreCase = true) == true) ||
-//                    (claim.item?.description?.contains(trimmedQuery, ignoreCase = true) == true) ||
-//                    (claim.claimDescription.contains(trimmedQuery, ignoreCase = true))
-//
-//
-//
-//            matchesCategory &&
-//                    matchesLocation &&
-//                    matchesStatus &&
-//
-//                    matchesSearch&&
-//                    matchesDate&&
-//                    matchesTime
-//
-//        }
-//
-//
-//        _uiState.update { it.copy(hasFiltered = true) }
-//    }
-
-
     fun removeFilter(type: String, value: String) {
         when(type) {
 
@@ -232,9 +171,14 @@ class SharedFilterViewModel(
                 )
             }
 
-            "ReservationDate Date" -> _uiState.update { currentState ->
+            "Reservation Date" -> _uiState.update { currentState ->
                 currentState.copy(
                     reservationDate = null
+                )
+            }
+            "Reservation Made Date" -> _uiState.update { currentState ->
+                currentState.copy(
+                    reservationMadeDate = null
                 )
             }
 
@@ -248,93 +192,95 @@ class SharedFilterViewModel(
                     endTime = null
                 )
             }
-            else -> { /* no-op or log unknown type */}
+            else -> { }
         }
         performSearch()
     }
 
-    fun setReservationData(reservations: List<ReservationEntity>) {
-        _uiState.update { it.copy(allReservationData = reservations) }
-        performSearch()
-    }
 
+    @OptIn(ExperimentalMaterial3Api::class)
     fun performSearch() {
-
         val state = _uiState.value
         val trimmedQuery = state.searchQuery.trim()
 
 
-        _uiState.update { it.copy(searchQuery = trimmedQuery) }
+        val locations = if (state.selectedLocations.contains("All")) emptyList()
+        else state.selectedLocations
 
 
-
-
-        _filteredReservationData.value = state.allReservationData
-
-
-
-
-        _filteredReservationData.value = state.allReservationData
-//            .filter { item ->
-
-
-        val locations =
-            if (state.selectedLocations.contains("All")) emptyList()
-            else state.selectedLocations
-        Log.d("FilterDebug", "All reservations: ${state.allReservationData}")
-        Log.d("FilterDebug", "Selected locations: $locations")
         val filteredList = state.allReservationData.filter { reservation ->
-            val matchesLocation = locations.isEmpty() || reservation.zone in locations
-//            val matchesQuery = trimmedQuery.isBlank() || reservation.title.contains(trimmedQuery, true) || item.id.contains(trimmedQuery, true)
-//            val matchesDate = state.reservationDate == null || reservation.date == state.reservationDate
-//            val matchesTime = (state.startTime == null || !reservation.reservationTime.isBefore(state.startTime)) &&
-//                    (state.endTime == null || !reservation.startTime.isAfter(state.endTime))
 
-            matchesLocation
-//                    &&
-//                    matchesQuery &&
-//                    matchesDate
-//                    matchesTime
+            val matchesLocation = locations.isEmpty() || reservation.zone in locations
+
+
+            val matchesQuery = trimmedQuery.isBlank() ||
+                    reservation.reservationId.contains(trimmedQuery, ignoreCase = true) ||
+                    reservation.reservationStatus.contains(trimmedQuery, ignoreCase = true)||
+                    reservation.specialRequests.contains(trimmedQuery, ignoreCase = true)
+
+//                    reservations
+
+
+            val matchesReservationMadeDate = if (state.reservationMadeDate == null) {
+                true
+            } else {
+                val dbDate = try {
+
+                    LocalDate.parse(reservation.reservationMadeDate)
+                } catch (e: Exception) {
+                    null
+                }
+                dbDate == state.reservationMadeDate
+            }
+
+            val matchesReservationDate = if (state.reservationDate == null) {
+                true
+            } else {
+                val dbDate = try {
+
+                    LocalDate.parse(reservation.date)
+                } catch (e: Exception) {
+                    null
+                }
+                dbDate == state.reservationDate
+            }
+
+            val reservationTime = try {
+                LocalTime.parse(reservation.startTime)
+            } catch (e: Exception) {
+                null
+            }
+
+            val matchesTime = if (reservationTime == null) true else {
+                when {
+                    state.startTime != null && state.endTime != null -> {
+                        !reservationTime.isBefore(state.startTime) && !reservationTime.isAfter(state.endTime)
+                    }
+                    state.startTime != null -> !reservationTime.isBefore(state.startTime)
+                    state.endTime != null -> !reservationTime.isAfter(state.endTime)
+                    else -> true
+                }
+            }
+
+
+            matchesLocation && matchesQuery && matchesReservationDate&&matchesReservationMadeDate && matchesTime
         }
 
+
+        _filteredReservationData.value = filteredList
         _uiState.update { it.copy(
+            searchQuery = trimmedQuery,
             filteredReservationData = filteredList,
             hasFiltered = true
         ) }
     }
-    fun cancelReservation(reservation: ReservationEntity) {
-
-        val updatedReservations = _uiState.value.allReservationData.map {
-            if (it.reservationId == reservation.reservationId) {
-                it.copy(reservationStatus = "Cancelled")
-            } else it
-        }
-        _uiState.value = _uiState.value.copy(allReservationData = updatedReservations)
-
-
-        viewModelScope.launch {
-            try {
-                reservationRepository.cancelReservation(reservation.reservationId)
-            } catch (e: Exception) {
-                _errorEvent.emit("Failed to cancel reservation: ${e.message}")
-            }
-        }
-
-
-        performSearch()
-    }
 
 
 
 
-    private fun combineDateTime(
-        date: LocalDate?,
-        time: LocalTime?
-    ): LocalDateTime? {
-        return if (date != null && time != null) {
-            LocalDateTime.of(date, time)
-        } else null
-    }
+
+
+
 
 
 }

@@ -1,5 +1,6 @@
 package com.example.yumyumrestaurant.data.ReservationData
 
+import android.util.Log
 import com.example.yumyumrestaurant.data.CustomerEntity
 import com.example.yumyumrestaurant.data.ReservationTableData.Reservation_Table_Entity
 import com.example.yumyumrestaurant.data.TableData.TableEntity
@@ -38,8 +39,11 @@ class ReservationRepository(private val reservationDao: ReservationDao?=null) {
         }
     }
 
-    suspend fun cancelReservation(reservationId: String) {
-        reservationDao?.updateReservationStatus(reservationId, "Cancelled")
+    suspend fun cancelReservation(reservation: ReservationEntity) {
+
+        reservationDao?.updateReservationStatus(reservations = reservation)
+
+
     }
     suspend fun generateReservationID(): String {
         val documentRef = firestore.collection("Counters").document("reservation_counter")
@@ -81,7 +85,9 @@ class ReservationRepository(private val reservationDao: ReservationDao?=null) {
             it.toObject(ReservationEntity::class.java)?.copy(reservationId = it.id)
         }
     }
-
-
+    suspend fun getReservationById(resId: String): ReservationEntity? {
+        // If using Room:
+        return reservationDao?.getReservationById(resId)
+    }
 }
 

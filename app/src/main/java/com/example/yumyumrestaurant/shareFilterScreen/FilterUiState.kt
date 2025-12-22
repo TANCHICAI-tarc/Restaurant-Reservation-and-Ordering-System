@@ -9,14 +9,14 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
 
 data class FilterUiState(
     val reservationIdQuery: String = "",
 
     // Indoor / Outdoor
-    val selectedZone: ZoneTab? = null,
-
+    val selectedLocations: List<String> = listOf("All"),
     // Today | This Week | All
 
     val selectedDateRange: DateRangeFilter = DateRangeFilter.ALL,
@@ -33,7 +33,7 @@ data class FilterUiState(
     val hasFiltered: Boolean = false,
     val searchQuery: String = "",
     val showClearFiltersConfirmation:Boolean=false,
-
+    val reservationMadeDate: LocalDate? = null,
 
     val appliedFilters: Map<String, List<String>> = emptyMap(),
 
@@ -46,7 +46,7 @@ data class FilterUiState(
     val isLocationExpanded: Boolean = false,
 
 
-    val selectedLocations: List<String> = emptyList(),
+
     val allReservationData: List<ReservationEntity> = emptyList(),
     val filteredReservationData: List<ReservationEntity> = emptyList()
 

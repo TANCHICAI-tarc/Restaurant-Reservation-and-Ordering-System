@@ -28,5 +28,8 @@ data class ReservationTableUiState(
     val capturedBitmaps: Map<String, Bitmap> = emptyMap(),
     var tableStatus:String="",
     var isCapturing:Boolean=false,
+    val selectedTables: List<TableEntity> = emptyList(),
+
+
 
 )

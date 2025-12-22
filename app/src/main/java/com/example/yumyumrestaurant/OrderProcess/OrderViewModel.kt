@@ -254,4 +254,30 @@ class OrderViewModel(
     fun resetNavigation() {
         _navigateToSuccess.value = false
     }
+
+
+
+
+    fun loadOrderItemsByReservationId(resId: String) {
+        viewModelScope.launch {
+
+            val items = orderRepository.getItemsByReservationId(resId)
+
+
+            val subTotal = items. sumOf { item ->
+                item.menuItem.price * item.quantity
+            }
+            val tax = subTotal * 0.06
+
+            // 3. Update the state
+            _orderUiState.update { currentState ->
+                currentState.copy(
+                    selectedItems = items,
+                    subTotal = subTotal,
+                    taxAmount = tax,
+                    totalPrice = subTotal + tax
+                )
+            }
+        }
+    }
 }

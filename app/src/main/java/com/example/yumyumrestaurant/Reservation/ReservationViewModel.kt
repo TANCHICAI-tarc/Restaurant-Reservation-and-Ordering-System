@@ -16,6 +16,8 @@ import com.example.yumyumrestaurant.data.ReservationData.ReservationRepository
 import com.example.yumyumrestaurant.data.ReservationTableData.Reservation_TableDatabase
 import com.example.yumyumrestaurant.data.TableData.TableEntity
 import com.example.yumyumrestaurant.data.TableData.TableRepository
+import com.google.firebase.Firebase
+import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,11 +28,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.LocalDateTime
+import kotlin.collections.map
 
 
 private val TIME_DISPLAY_FORMATTER = DateTimeFormatter.ofPattern("hh:mm a")
@@ -63,7 +67,9 @@ class ReservationViewModel(application: Application) : AndroidViewModel(applicat
     val validationEvents: SharedFlow<String> = _validationEvents.asSharedFlow()
 
 
-
+    fun updateSelectedReservation(reservation: ReservationEntity?) {
+        _uiState.value = _uiState.value.copy(reservation = reservation)
+    }
     private val openingTime = LocalTime.of(9, 0)
     private val closingTime = LocalTime.of(22, 0)
     private val minDuration = 30
@@ -111,15 +117,19 @@ class ReservationViewModel(application: Application) : AndroidViewModel(applicat
             reservationRepository.syncTablesFromFirebase()
         }
 
-
         viewModelScope.launch {
             reservationRepository.allReservations.collect { reservations ->
+
+                checkAndAutoUpdateStatuses(reservations)
+
                 _uiState.update { currentState ->
                     currentState.copy(reservations = reservations)
                 }
             }
-
         }
+
+
+
 
 
     }
@@ -482,13 +492,18 @@ class ReservationViewModel(application: Application) : AndroidViewModel(applicat
                 durationMinutes = state.selectedDurationMinutes,
                 endTime = state.selectedStartTime.plusMinutes(state.selectedDurationMinutes.toLong()).toString(),
                 guestCount = state.guestCount,
-                zone = state.selectedZone,
+                zone = state.selectedTables
+                    .map { it.zone }
+                    .distinct()
+                    .joinToString(", "),
                 specialRequests = state.specialRequests,
                 reservationStatus = "Confirmed",
+                reservationMadeDate= LocalDate.now().toString(),
                 userId = state.customer!!.userId
 
             )
             reservationRepository.insertTable(reservation)
+
 
 
             onResult(state.reservationId)
@@ -506,6 +521,17 @@ class ReservationViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
+    fun changeReservationStatus(reservation: ReservationEntity, status: String) {
+
+        viewModelScope.launch {
+            val updated = reservation.copy(reservationStatus = status)
+            Firebase.firestore.collection("Reservations").document(reservation.reservationId)
+                .update("reservationStatus", status).await()
+            reservationRepository.cancelReservation(updated)
+            _uiState.update { it.copy(reservations = it.reservations.map { if (it.reservationId == reservation.reservationId) updated else it }) }
+        }
+
+    }
 
 
 
@@ -557,6 +583,49 @@ class ReservationViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
+
+
+
+    private fun checkAndAutoUpdateStatuses(reservations: List<ReservationEntity>) {
+        val today = LocalDate.now()
+        val now = LocalTime.now()
+
+        viewModelScope.launch {
+            reservations.forEach { reservation ->
+                val resDate = try { LocalDate.parse(reservation.date) } catch (e: Exception) { null }
+                val resEndTime = try { LocalTime.parse(reservation.endTime) } catch (e: Exception) { null }
+
+                if (reservation.reservationStatus == "Confirmed" && resDate != null) {
+
+                    val isPastDate = resDate.isBefore(today)
+                    val isPastTimeToday = resDate.isEqual(today) && resEndTime != null && resEndTime.isBefore(now)
+
+                    if (isPastDate || isPastTimeToday) {
+
+                        updateStatusToCompleted(reservation)
+                    }
+                }
+            }
+        }
+    }
+
+    private suspend fun updateStatusToCompleted(reservation: ReservationEntity) {
+        try {
+
+            Firebase.firestore.collection("Reservations")
+                .document(reservation.reservationId)
+                .update("reservationStatus", "Completed")
+                .await()
+
+
+            val completedReservation = reservation.copy(reservationStatus = "Completed")
+            reservationRepository.insertTable(completedReservation)
+
+
+        } catch (e: Exception) {
+            Log.e("AutoStatus", "Failed to auto-complete ${reservation.reservationId}: ${e.message}")
+        }
+    }
 
 }
 

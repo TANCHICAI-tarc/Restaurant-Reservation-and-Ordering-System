@@ -3,6 +3,7 @@ package com.example.yumyumrestaurant.shareFilterScreen
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.os.Build
+import android.util.Log
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedVisibility
@@ -20,6 +21,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
+import androidx.compose.material3.DatePickerDefaults.dateFormatter
 
 
 import androidx.compose.runtime.*
@@ -63,13 +65,11 @@ fun SharedFilterSection(
             placeholder = { Text(stringResource(R.string.search_item)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
-//              keyboardOptions = KeyboardOptions(
-//                    imeAction = ImeAction.Search
-//                ),
+
             keyboardActions = KeyboardActions(
                 onSearch = {
                     viewModel.updateSearchQuery(localSearchQuery)
-//                    viewModel.performSearch()
+                    viewModel.performSearch()
                 }
             )
         )
@@ -79,7 +79,7 @@ fun SharedFilterSection(
         AppliedFiltersSummary(
             filters = uiState.appliedFilters,
             onRemoveFilter = { type, value ->
-//                viewModel.removeFilter(type, value)
+                viewModel.removeFilter(type, value)
                              },
             onClearAll = { viewModel.showClearFiltersConfirmationDialog(true) }
         )
@@ -162,7 +162,7 @@ fun FilterDialog(viewModel: SharedFilterViewModel) {
                             Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close_filter_dialog))
                         }
                         Text(
-                            stringResource(R.string.filter_lost_items),
+                            "Filter Reservation",
                             style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier.weight(1f)
                         )
@@ -212,7 +212,10 @@ fun FilterDialog(viewModel: SharedFilterViewModel) {
                                             onCheckedChange = { checked ->
                                                 viewModel.toggleLocation(location, checked)
                                             }
+
                                         )
+
+
                                         Spacer(modifier = Modifier.width(dimensionResource(R.dimen.dp_8)))
                                         Text(
                                             text = location,
@@ -227,67 +230,65 @@ fun FilterDialog(viewModel: SharedFilterViewModel) {
                     }
 
 
+                    val calendar = Calendar.getInstance()
+                    val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
 
+
+
+
+
+                    val timeFormatter = DateTimeFormatter.ofPattern("hh:mm a", Locale.ENGLISH)
 
 
                     if (uiState.showDateTime) {
-                        val context = LocalContext.current
-                        val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
-                        val timeFormatter = DateTimeFormatter.ofPattern("hh:mm a")
-                        val todayInMillis = Calendar.getInstance().apply {
-                            set(Calendar.HOUR_OF_DAY, 23)
-                            set(Calendar.MINUTE, 59)
-                            set(Calendar.SECOND, 59)
-                            set(Calendar.MILLISECOND, 999)
-                        }.timeInMillis
-
-                        Spacer(modifier = Modifier.height(dimensionResource(R.dimen.dp_16)))
 
                         Text(
-                            text = "📅 Select Reservation Date",
+                            text = "\uD83D\uDCC5Reservation Date",
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
 
+
+                        calendar.set(Calendar.HOUR_OF_DAY, 0)
+                        calendar.set(Calendar.MINUTE, 0)
+                        calendar.set(Calendar.SECOND, 0)
+
+
                         Column(
                             modifier = Modifier.fillMaxWidth()
                         ) {
-
-
-
-
                             OutlinedButton(
                                 onClick = {
-                                    val picker = DatePickerDialog(context)
-                                    picker.datePicker.maxDate = todayInMillis
-                                    uiState.reservationDate?.let { startDate ->
-                                        val cal = Calendar.getInstance().apply {
-                                            set(
-                                                startDate.year,
-                                                startDate.monthValue - 1,
-                                                startDate.dayOfMonth
-                                            )
-                                        }
-                                        picker.datePicker.minDate = cal.timeInMillis
-                                    }
-                                    picker.setOnDateSetListener { _, year, month, day ->
-                                        viewModel.setReservationDate(LocalDate.of(year, month + 1, day))
-                                    }
+                                    val picker = DatePickerDialog(
+                                        context,
+                                        { _, year, month, day ->
+                                            viewModel.setReservationDate(LocalDate.of(year, month + 1, day))
+                                        },
+                                        uiState.reservationDate?.year ?: calendar.get(Calendar.YEAR),
+                                        uiState.reservationDate?.monthValue?.minus(1) ?: calendar.get(Calendar.MONTH),
+                                        uiState.reservationDate?.dayOfMonth ?: calendar.get(Calendar.DAY_OF_MONTH)
+                                    )
+
+
+
+
+
+
                                     picker.show()
                                 },
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Box(modifier = Modifier.fillMaxWidth()) {
                                     Text(
-                                        text = uiState.reservationDate?.format(dateFormatter) ?: "reservationDate",
+                                        text = uiState.reservationDate
+                                            ?.format(dateFormatter)
+                                            ?: "Select Date",
                                         style = MaterialTheme.typography.bodyMedium,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Clip,
                                         modifier = Modifier.align(Alignment.CenterStart)
                                     )
                                     Icon(
                                         Icons.Default.KeyboardArrowDown,
-                                        contentDescription = "Select start date",
+                                        contentDescription = null,
                                         modifier = Modifier.align(Alignment.CenterEnd)
                                     )
                                 }
@@ -295,6 +296,52 @@ fun FilterDialog(viewModel: SharedFilterViewModel) {
                         }
 
 
+                        Text(
+                            text = "\uD83D\uDCDCReservation Made Date",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+
+                        Column(
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            OutlinedButton(
+                                onClick = {
+                                    val picker = DatePickerDialog(
+                                        context,
+                                        { _, year, month, day ->
+                                            viewModel.setReservationMadeDate(LocalDate.of(year, month + 1, day))
+                                        },
+                                        uiState.reservationDate?.year ?: calendar.get(Calendar.YEAR),
+                                        uiState.reservationDate?.monthValue?.minus(1) ?: calendar.get(Calendar.MONTH),
+                                        uiState.reservationDate?.dayOfMonth ?: calendar.get(Calendar.DAY_OF_MONTH)
+                                    )
+
+
+
+
+
+
+                                    picker.show()
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Box(modifier = Modifier.fillMaxWidth()) {
+                                    Text(
+                                        text = uiState.reservationDate
+                                            ?.format(dateFormatter)
+                                            ?: "Select Date",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        modifier = Modifier.align(Alignment.CenterStart)
+                                    )
+                                    Icon(
+                                        Icons.Default.KeyboardArrowDown,
+                                        contentDescription = null,
+                                        modifier = Modifier.align(Alignment.CenterEnd)
+                                    )
+                                }
+                            }
+                        }
 
 
                         val calendar = Calendar.getInstance()

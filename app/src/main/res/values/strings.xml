@@ -5,6 +5,9 @@
     <string name="title_cart_info">Cart Info</string>
     <string name="title_payment">Payment</string>
     <string name="title_order_success">Order Success</string>
+    <string name="title_view_reservation">View My Reservation</string>
+
+
     <string name="back_button">Back</string>
     <string name="decrease">Decrease</string>
     <string name="increase">Increase</string>"
@@ -35,4 +38,5 @@
     <string name="clear_all_filters">Clear All Filters</string>
     <string name="date_range">Date Range</string>
     <string name="time_range">Time Range</string>
+
 </resources>

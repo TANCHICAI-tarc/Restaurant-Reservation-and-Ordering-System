@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Update
 import com.example.yumyumrestaurant.data.ReservationTableData.Reservation_Table_Entity
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
@@ -16,9 +17,9 @@ interface ReservationDao {
     @Query("SELECT * FROM Reservations")
     fun getAllReservations():kotlinx.coroutines.flow.Flow<List<ReservationEntity>>
 
-    @Query("UPDATE Reservations SET reservationStatus = :status WHERE reservationId = :id")
-    suspend fun updateReservationStatus(id: String, status: String)
 
+    @Update
+    suspend fun updateReservationStatus(reservations: ReservationEntity)
     // Get table by ID
     @Query("SELECT * FROM Reservations WHERE reservationId = :reservationId LIMIT 1")
     suspend fun getReservationIdById(reservationId: String): ReservationEntity?
@@ -29,7 +30,8 @@ interface ReservationDao {
     @Query("DELETE FROM Reservations")
     suspend fun clearAllReservations()
 
-
+    @Query("SELECT * FROM reservations WHERE reservationId = :resId")
+    suspend fun getReservationById(resId: String): ReservationEntity?
 
 
     @Query("""

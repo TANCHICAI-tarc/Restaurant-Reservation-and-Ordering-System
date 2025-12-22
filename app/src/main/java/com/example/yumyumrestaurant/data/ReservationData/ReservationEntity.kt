@@ -17,6 +17,7 @@ data class ReservationEntity(
     @PrimaryKey
     var reservationId: String = "",
     var date: String = "",
+
     var startTime: String = "",
     var durationMinutes: Int = 15,
     var endTime: String = "",
@@ -24,7 +25,9 @@ data class ReservationEntity(
     var guestCount: Int = 2,
     var zone: String = "INDOOR",
     var specialRequests: String = "",
-    var reservationStatus: String = "PENDING",
+    var reservationStatus: String = "Confirmed",
+    var reservationMadeDate: String = "",
+
     var userId: String = ""
 )
 

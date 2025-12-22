@@ -76,6 +76,9 @@ fun TableDetailScreen(
     onNavigateUp: () -> Unit,
     isReadOnly: Boolean = false
 ) {
+
+
+
     // Load table data
     LaunchedEffect(tableId) {
         reservationTableViewModel.tableViewModel.loadTableById(tableId)
@@ -112,7 +115,7 @@ fun TableDetailScreen(
     }
 
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
 
         Column(
             modifier = Modifier
@@ -297,7 +300,7 @@ fun TableDetailScreen(
                         .padding(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Left Button
+
                     OutlinedButton(
                         onClick = { onNavigateUp() },
                         modifier = Modifier

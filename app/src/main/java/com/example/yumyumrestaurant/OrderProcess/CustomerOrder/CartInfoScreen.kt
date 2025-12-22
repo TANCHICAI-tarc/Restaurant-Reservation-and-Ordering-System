@@ -408,12 +408,17 @@ fun ReservationSummarySection(reservationUiState: ReservationUiState) {
             Text(reservationUiState.guestCount.toString(), fontSize = 15.sp, fontWeight = FontWeight.Medium)
         }
 
+        val zonesText = reservationUiState.selectedTables
+            .map { it.zone }
+            .distinct()
+            .joinToString(", ")
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text("Zone", fontSize = 15.sp)
-            Text(reservationUiState.selectedZone, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+            Text(zonesText.ifBlank { "-" }, fontSize = 15.sp, fontWeight = FontWeight.Medium)
         }
 
         val tablesText = reservationUiState.selectedTables.joinToString { it.label }

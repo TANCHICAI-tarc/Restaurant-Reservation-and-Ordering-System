@@ -1,5 +1,6 @@
 package com.example.yumyumrestaurant
 
+import android.app.Application
 import android.content.Context
 import android.os.Build
 import androidx.annotation.RequiresApi
@@ -78,8 +79,11 @@ import com.example.yumyumrestaurant.Reservation.ReservationViewModel
 import com.example.yumyumrestaurant.ReservationTable.ReservationTableViewModel
 import com.example.yumyumrestaurant.ReservationTable.ReservationTableViewModelFactory
 import com.example.yumyumrestaurant.TableSelectionScreen.TableViewModel
+import com.example.yumyumrestaurant.data.ReservationData.ReservationRepository
 import com.example.yumyumrestaurant.data.ReservationTableData.ReservationTableRepository
 import com.example.yumyumrestaurant.data.ReservationTableData.Reservation_TableDatabase
+import com.example.yumyumrestaurant.data.TableData.TableRepository
+import com.example.yumyumrestaurant.shareFilterScreen.SharedFilterViewModel
 import com.example.yumyumrestaurant.ui.AboutViewModel
 import com.example.yumyumrestaurant.ui.UserViewModel
 import com.google.firebase.auth.FirebaseAuth
@@ -135,6 +139,14 @@ fun UserHome(navController: NavHostController, modifier: Modifier) {
                 .width(220.dp)
                 .background(color = Color.Yellow)
         ){
+            Text(
+                text = "Reservation Rules:\n" +
+                        "- Restaurant open: 9:00 AM to 10:00 PM\n" +
+                        "- Reservations must be made at least 2 hours in advance\n" +
+                        "- Maximum reservation duration: 5 hours",
+                modifier = Modifier.padding(16.dp),
+                color = Color.Black
+            )
 
         }
     }
@@ -143,9 +155,12 @@ fun UserHome(navController: NavHostController, modifier: Modifier) {
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun Reservation(
+    userViewModel: UserViewModel,
     drawerState: DrawerState,
     scope: CoroutineScope,
-    openDrawer: () -> Unit
+    openDrawer: () -> Unit,
+    onNavigateToViewReservation: () -> Unit,
+    sharedFilterViewModel:SharedFilterViewModel
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -157,20 +172,25 @@ fun Reservation(
 
 
 
-        val context = androidx.compose.ui.platform.LocalContext.current
-        val application = context.applicationContext as android.app.Application
+        val context = LocalContext.current
+        val application = context.applicationContext as Application
 
 
         val tableViewModel: TableViewModel = viewModel()
         val database = Reservation_TableDatabase.getReservationTableDatabase(application)
         val reservationTableRepository = ReservationTableRepository(database.reservationTableDao())
+        val reservationRepository = ReservationRepository(database.reservationDao())
+        val tableRepository = TableRepository(database.tableDao())
         val reservationViewModel: ReservationViewModel = viewModel()
+
 
         val reservationTableViewModel: ReservationTableViewModel = viewModel(
             factory = ReservationTableViewModelFactory(
                 tableViewModel,
                 reservationViewModel,
-                reservationTableRepository
+                reservationTableRepository,
+                reservationRepository = reservationRepository,
+                tableRepository = tableRepository,
             )
         )
 
@@ -178,17 +198,20 @@ fun Reservation(
             reservationTableViewModel = reservationTableViewModel,
             menuViewModel = menuViewModel,
             orderViewModel = orderViewModel,
+            userViewModel= userViewModel,
             navController = reservationNavController,
             modifier = Modifier.fillMaxSize(),
             isFirstScreenDrawer = true,
             drawerState = drawerState,
             scope = scope,
-            openDrawer = openDrawer
+            openDrawer = openDrawer,
+            onNavigateToViewReservation,
+            sharedFilterViewModel
         )
     }
 }
 @Composable
-fun ViewReservation(navController: NavHostController, userViewModel: UserViewModel, modifier: Modifier) {
+fun ViewReservation(navController: NavHostController, userViewModel: UserViewModel, sharedFilterViewModel: SharedFilterViewModel, modifier: Modifier) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
@@ -196,7 +219,10 @@ fun ViewReservation(navController: NavHostController, userViewModel: UserViewMod
             .fillMaxSize()
 
     ) {
-        UserViewReservationScreen(navController,userViewModel)
+        UserViewReservationScreen(navController,userViewModel, sharedFilterViewModel = sharedFilterViewModel, modifier = modifier,onViewDetail = { resId ->
+
+            navController.navigate("reservation_detail/$resId")
+        })
 
     }
 }

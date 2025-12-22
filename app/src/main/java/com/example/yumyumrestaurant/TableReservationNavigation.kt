@@ -76,7 +76,7 @@ import com.example.yumyumrestaurant.OrderProcess.CustomerOrder.MenuScreen
 import com.example.yumyumrestaurant.OrderProcess.CustomerOrder.OrderSuccessScreen
 import com.example.yumyumrestaurant.OrderProcess.MenuViewModel
 import com.example.yumyumrestaurant.OrderProcess.OrderViewModel
-import com.example.yumyumrestaurant.Reservation.GlobalContinueReservationBar
+
 import com.example.yumyumrestaurant.Reservation.ReservationConfirmationScreen
 
 import com.example.yumyumrestaurant.Reservation.ReservationViewModel
@@ -91,6 +91,8 @@ import com.example.yumyumrestaurant.TableSelectionScreen.TableViewModelFactory
 
 
 import com.example.yumyumrestaurant.data.ReservationFormScreen
+import com.example.yumyumrestaurant.shareFilterScreen.SharedFilterViewModel
+import com.example.yumyumrestaurant.ui.UserViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.io.File
@@ -103,7 +105,8 @@ enum class ReservationNavigation(@StringRes val title: Int) {
     MenuScreen(title = R.string.title_menu_selection),
     MenuDetailsScreen(title = R.string.title_menu_details),
     CartInfoScreen(title = R.string.title_cart_info),
-    OrderSuccessScreen(title = R.string.title_order_success)
+    OrderSuccessScreen(title = R.string.title_order_success),
+    ViewReservation(title = R.string.title_view_reservation)
 //    Success(title = R.string.title_reservation_success),
 }
 
@@ -175,12 +178,15 @@ fun TableReservationNavigation(
     reservationTableViewModel: ReservationTableViewModel,
     menuViewModel: MenuViewModel,
     orderViewModel: OrderViewModel,
+    userViewModel: UserViewModel,
     navController: NavHostController,
     modifier: Modifier = Modifier,
     isFirstScreenDrawer: Boolean = false,
     drawerState: DrawerState? = null,
     scope: CoroutineScope? = null,
-    openDrawer: (() -> Unit)? = null
+    openDrawer: (() -> Unit)? = null,
+    onNavigateToViewReservation: () -> Unit,
+    sharedFilterViewModel: SharedFilterViewModel
 
 ) {
     val bottomSheetState = rememberModalBottomSheetState()
@@ -194,14 +200,17 @@ fun TableReservationNavigation(
     val currentTitleRes = when {
         route?.startsWith("table_details_screen") == true ->
             R.string.title_table_details
-
+        route?.startsWith("table_preview") == true ->
+            R.string.title_table_details
+        route == ReservationNavigation.ViewReservation.name ->
+            ReservationNavigation.ViewReservation.title
         route?.contains(ReservationNavigation.ReservationConfirmationScreen.name) == true ->
             ReservationNavigation.ReservationConfirmationScreen.title
         route != null && ReservationNavigation.values()
             .any { it.name == route } ->
             ReservationNavigation.valueOf(route).title
 
-        route?.startsWith(ReservationNavigation.MenuScreen.name) == true ->
+                route?.startsWith(ReservationNavigation.MenuScreen.name) == true ->
             ReservationNavigation.MenuScreen.title
 
         else ->
@@ -248,7 +257,7 @@ fun TableReservationNavigation(
     val currentRoute = navBackStackEntry?.destination?.route
     Scaffold(
         topBar = {
-            if (route != ReservationNavigation.OrderSuccessScreen.name) {
+            if (route != ReservationNavigation.OrderSuccessScreen.name&&route!= ReservationNavigation.ViewReservation.name) {
                 val isFirstScreen = route == null || route == ReservationNavigation.ReservationFormScreen.name
                 val context = LocalContext.current
                 val scope = rememberCoroutineScope()
@@ -268,7 +277,7 @@ fun TableReservationNavigation(
 
                             }
 
-                            route?.startsWith("table_details_screen") == true -> {
+                            (route?.startsWith("table_details_screen") == true||route?.startsWith("table_preview") == true) -> {
                                 val tableId = backStackEntry?.arguments?.getString(TableIdArg)
                                 val selectedTable = tableUiState.tables.firstOrNull { it.tableId == tableId }
 
@@ -298,37 +307,7 @@ fun TableReservationNavigation(
 
             }
         },
-        bottomBar = {
 
-            val baseRoute = currentRoute?.substringBefore("/")
-
-            val allowedScreens = listOf(
-                ReservationNavigation.MenuScreen.name,
-                ReservationNavigation.CartInfoScreen.name,
-                ReservationNavigation.MenuDetailsScreen.name,
-                ReservationNavigation.ReservationFormScreen.name
-            )
-
-            // 2. Add a check for table details specifically if needed
-            val isAllowed = allowedScreens.contains(baseRoute) || currentRoute?.startsWith("table_details_screen") == true
-
-            if (isActive && isAllowed) {
-                GlobalContinueReservationBar(
-                    viewModel = reservationTableViewModel,
-                    onContinue = {
-                        val id = reservationUiState.reservationId
-                        // 3. Ensure ID is not empty before navigating
-                        if (!id.isNullOrEmpty()) {
-                            navController.navigate("${ReservationNavigation.ReservationConfirmationScreen.name}/$id") {
-                                // Prevent multiple copies of the same screen on the stack
-                                popUpTo(ReservationNavigation.ReservationFormScreen.name)
-                                launchSingleTop = true
-                            }
-                        }
-                    }
-                )
-            }
-        }
     ) { innerPadding ->
         NavHost(
             navController = navController,
@@ -446,16 +425,16 @@ fun TableReservationNavigation(
                 val navigateToSuccess by orderViewModel.navigateToSuccess.collectAsState()
                 val showDialog by orderViewModel.showConfirmDialog.collectAsState()
 
-                // Observe the navigateToSuccess flag
+
                 LaunchedEffect(navigateToSuccess) {
                     if (navigateToSuccess) {
                         navController.navigate(ReservationNavigation.OrderSuccessScreen.name) {
                             popUpTo(ReservationNavigation.CartInfoScreen.name) { inclusive = true }
                         }
-                        orderViewModel.resetNavigation() // reset flag after navigating
+                        orderViewModel.resetNavigation()
                     }
                 }
-
+                val reservationTableUiState by reservationTableViewModel.reservationTableUiState.collectAsState()
                 Box(modifier = Modifier.fillMaxSize()) {
                     CartInfoScreen(
                         orderViewModel = orderViewModel,
@@ -478,6 +457,10 @@ fun TableReservationNavigation(
                         }
                     }
                 }
+                val capturedFilesRaw by reservationTableViewModel.capturedFiles.collectAsState()
+                val capturedFiles = remember(capturedFilesRaw) {
+                    capturedFilesRaw.map { it.absolutePath }
+                }
                 if (showDialog) {
                     AlertDialog(
                         onDismissRequest = { orderViewModel.dismissOrderConfirmation() },
@@ -488,10 +471,12 @@ fun TableReservationNavigation(
                                 onClick = {
                                     orderViewModel.startOrdering()
                                     showSheet = false
+
                                     reservationTableViewModel.reservationViewModel.saveReservation { reservationID ->
                                         orderViewModel.confirmOrderAndProceed(reservationID)
-                                        reservationTableViewModel.saveReservationWithTables(reservationUiState.selectedTables,reservationID)
+                                        reservationTableViewModel.saveReservationWithTables(reservationUiState.selectedTables,reservationID,capturedFiles)
                                     }
+                                    reservationTableViewModel.tableViewModel.clearSelection()
 
                                 }
                             ) {
@@ -510,14 +495,24 @@ fun TableReservationNavigation(
 
             }
 
+            composable(ReservationNavigation.ViewReservation.name) {
+                ViewReservation(
+                    navController = navController,
+                    userViewModel = userViewModel,
+                    modifier = Modifier.fillMaxSize(),
+                    sharedFilterViewModel = sharedFilterViewModel
+                )
+            }
+
+
+
             composable(ReservationNavigation.OrderSuccessScreen.name) {
                 BackHandler(enabled = true) {}
                 OrderSuccessScreen(
-                    onBackToHome = {
-                        navController.navigate(ReservationNavigation.ReservationFormScreen.name) {
-                            popUpTo(navController.graph.startDestinationId) { inclusive = true }
-                            launchSingleTop = true
-                        }
+
+                    onBackToViewMyReservation = {
+
+                        onNavigateToViewReservation()
                     },
                     modifier = Modifier.fillMaxHeight()
                 )

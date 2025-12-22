@@ -17,7 +17,7 @@ data class ReservationUiState (
 
 
     var selectedDate: LocalDate = LocalDate.now(),
-
+    val reservation: ReservationEntity? = null,
     val selectedStartTime: LocalTime = run {
         val suggested = LocalTime.now().plusHours(2)
 
@@ -52,5 +52,6 @@ data class ReservationUiState (
     val selectedZone: String = "INDOOR",
 
     val customer: CustomerEntity = CustomerEntity(),
-    val isReserving:Boolean=false
+    val isReserving:Boolean=false,
+
 )

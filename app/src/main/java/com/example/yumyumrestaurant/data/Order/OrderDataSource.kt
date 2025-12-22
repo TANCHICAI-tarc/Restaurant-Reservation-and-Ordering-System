@@ -5,6 +5,7 @@ import com.example.yumyumrestaurant.OrderProcess.OrderItemUiState
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
+import kotlin.text.get
 
 class OrderDataSource {
     private val db = FirebaseFirestore.getInstance()
@@ -143,5 +144,29 @@ class OrderDataSource {
             .document(orderID)
             .update("OrderStatus", newStatus)
             .await()
+    }
+
+    suspend fun getOrderItemsByReservationId(resId: String): List<MenuOrder> {
+        return try {
+
+            val orderSnapshot = db.collection("Orders")
+                .whereEqualTo("ReservationID", resId)
+                .get()
+                .await()
+
+            val orderDoc = orderSnapshot.documents.firstOrNull()
+            val orderId = orderDoc?.id ?: return emptyList()
+
+
+            db.collection("MenuOrders")
+                .whereEqualTo("orderID", orderId)
+                .get()
+                .await()
+                .toObjects(MenuOrder::class.java)
+
+        } catch (e: Exception) {
+            Log.e("OrderDataSource", "Error fetching order items", e)
+            emptyList()
+        }
     }
 }
